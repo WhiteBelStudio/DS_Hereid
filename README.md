@@ -5,7 +5,9 @@ Universal Discord bot built with JavaScript, Node.js 22 and discord.js 14 for Pt
 ## Foundation included
 - Discord login and structured console logging.
 - Slash commands: `/help`, `/ping`, `/botinfo`.
-- SQLite tables for guild settings, member statistics, moderation cases, and tickets.
+- SQLite tables for guild settings, member statistics, moderation cases, and tickets; WAL mode, foreign keys, and a busy timeout are configured.
+- Startup validation for Discord IDs, required environment variables, and log level.
+- Project-wide JavaScript syntax check through `npm run check`.
 - Event-handler foundations for welcome/goodbye messages and automatic role assignment.
 - Basic repeated-message detection that logs suspicious activity only.
 
@@ -27,7 +29,7 @@ Universal Discord bot built with JavaScript, Node.js 22 and discord.js 14 for Pt
 ## Local setup
 1. Copy `.env.example` to `.env` and fill in the values.
 2. Install packages: `npm install`.
-3. Check the entry-point syntax: `npm run check`.
+3. Check the syntax of every JavaScript file: `npm run check`.
 4. Register guild slash commands: `npm run deploy:commands`.
 5. Start the bot: `npm start`.
 
@@ -40,6 +42,10 @@ On Windows, copy the example file manually if `cp` is unavailable.
 - Add `DISCORD_TOKEN`, `CLIENT_ID`, `GUILD_ID`, and optionally `DATABASE_PATH=./data/bot.sqlite` and `LOG_LEVEL=info` under Startup → Variables. Alternatively upload a local `.env` only if your hosting setup supports it.
 - Keep the `data` directory persistent across restarts and reinstallations.
 - Run `npm run deploy:commands` once before the first start and again after changing command definitions.
+
+## Current verification status
+- The repository files have been updated, but a live Discord login and a Pterodactyl startup have not been verified from this editing session.
+- Treat Stage 1 as in progress until `npm install` and `npm run check` succeed in the target environment.
 
 ## Security and data
 - Never commit `.env` or expose your bot token.
