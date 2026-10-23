@@ -98,6 +98,27 @@ process.on("uncaughtException", (error) => {
   process.exit(1);
 });
 
+let isShuttingDown = false;
+
+async function shutdown(signal) {
+  if (isShuttingDown) return;
+  isShuttingDown = true;
+  logger.info(`Received ${signal}; shutting down gracefully.`);
+
+  try {
+    client.destroy();
+    if (db.open) db.close();
+    logger.info("Discord client and database closed.");
+    process.exitCode = 0;
+  } catch (error) {
+    logger.error("Error during graceful shutdown.", error);
+    process.exitCode = 1;
+  }
+}
+
+process.once("SIGINT", () => { void shutdown("SIGINT"); });
+process.once("SIGTERM", () => { void shutdown("SIGTERM"); });
+
 client.login(config.token).catch((error) => {
   logger.error("Discord login failed. Check DISCORD_TOKEN and network access.", error);
   process.exit(1);
