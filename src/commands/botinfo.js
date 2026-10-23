@@ -5,8 +5,8 @@ module.exports = {
   async execute(interaction) {
     const embed = new EmbedBuilder()
       .setColor(0x5865f2)
-      .setTitle("🤖 Универсальный бот Нугзара")
-      .setDescription("Базовая версия проекта запущена. Функции будут подключаться по этапам.")
+      .setTitle("🕊 Дух Свободы | HeradeLegend")
+      .setDescription("Твой помощник на сервере: порядок, поддержка и развитие сообщества. Функции подключаются поэтапно.")
       .addFields(
         { name: "Библиотека", value: "discord.js v14", inline: true },
         { name: "Среда", value: `Node.js ${process.versions.node}`, inline: true },
