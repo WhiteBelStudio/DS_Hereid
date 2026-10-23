@@ -1,7 +1,7 @@
 {
   "name": "ds-hereid",
   "version": "1.0.0",
-  "description": "Universal Discord bot for Nugzar, hosted on Pterodactyl",
+  "description": "Дух Свободы 🕊 — универсальный Discord-бот HeradeLegend для сообщества",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
