@@ -1,5 +1,8 @@
 require("dotenv").config();
 
+const VALID_LOG_LEVELS = new Set(["error", "warn", "info", "debug"]);
+const SNOWFLAKE_PATTERN = /^\d{17,20}$/;
+
 function required(name) {
   const value = process.env[name]?.trim();
   if (!value || value.startsWith("PUT_")) {
@@ -8,11 +11,35 @@ function required(name) {
   return value;
 }
 
+function requiredSnowflake(name) {
+  const value = required(name);
+  if (!SNOWFLAKE_PATTERN.test(value)) {
+    throw new Error(`Invalid configuration: ${name} must be a Discord ID containing 17–20 digits.`);
+  }
+  return value;
+}
+
+const logLevel = (process.env.LOG_LEVEL || "info").trim().toLowerCase();
+if (!VALID_LOG_LEVELS.has(logLevel)) {
+  throw new Error(`Invalid LOG_LEVEL: use one of ${[...VALID_LOG_LEVELS].join(", ")}.`);
+}
+
+const ownerIds = (process.env.BOT_OWNER_IDS || "")
+  .split(",")
+  .map((id) => id.trim())
+  .filter(Boolean);
+
+for (const id of ownerIds) {
+  if (!SNOWFLAKE_PATTERN.test(id)) {
+    throw new Error("Invalid BOT_OWNER_IDS: provide comma-separated Discord IDs containing 17–20 digits.");
+  }
+}
+
 module.exports = {
   token: required("DISCORD_TOKEN"),
-  clientId: required("CLIENT_ID"),
-  guildId: required("GUILD_ID"),
-  ownerIds: (process.env.BOT_OWNER_IDS || "").split(",").map((id) => id.trim()).filter(Boolean),
-  databasePath: process.env.DATABASE_PATH || "./data/bot.sqlite",
-  logLevel: process.env.LOG_LEVEL || "info",
+  clientId: requiredSnowflake("CLIENT_ID"),
+  guildId: requiredSnowflake("GUILD_ID"),
+  ownerIds,
+  databasePath: process.env.DATABASE_PATH?.trim() || "./data/bot.sqlite",
+  logLevel,
 };
