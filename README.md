@@ -1,6 +1,6 @@
-# DS_Hereid — Discord bot for Nugzar
+# Дух Свободы 🕊 — HeradeLegend Discord bot
 
-Universal Discord bot built with JavaScript, Node.js 22 and discord.js 14 for Pterodactyl hosting.
+Universal Discord bot for community moderation and server utilities, built with JavaScript, Node.js 22 and discord.js 14 for Pterodactyl hosting.
 
 ## Foundation included
 - Discord login and structured console logging.
