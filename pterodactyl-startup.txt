@@ -1,0 +1,19 @@
+Pterodactyl egg: Node.js 22
+Install command: npm install
+Startup command: npm start
+
+Required environment variables:
+DISCORD_TOKEN
+CLIENT_ID
+GUILD_ID
+
+Recommended:
+DATABASE_PATH=./data/bot.sqlite
+LOG_LEVEL=info
+
+Before first start:
+1. Upload the project.
+2. Install dependencies with npm install.
+3. Set environment variables.
+4. Register slash commands with npm run deploy:commands.
+5. Start with npm start.
