@@ -5,13 +5,13 @@ module.exports = {
   async execute(interaction) {
     const embed = new EmbedBuilder()
       .setColor(0x5865f2)
-      .setTitle("📚 Команды бота")
+      .setTitle("🕊 Дух Свободы — команды")
       .setDescription([
         "`/help` — список команд",
         "`/ping` — проверка отклика",
         "`/botinfo` — информация о боте",
       ].join("\n"))
-      .setFooter({ text: "Новые команды будут добавляться по мере реализации модулей." });
+      .setFooter({ text: "HeradeLegend • новые команды подключаются по мере развития проекта." });
     await interaction.reply({ embeds: [embed] });
   },
 };
