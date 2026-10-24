@@ -80,7 +80,7 @@ module.exports = {
   data: new SlashCommandBuilder().setName("admin").setDescription("Открыть административную панель HeradeLegend."),
   async execute(interaction) {
     if (!interaction.inGuild()) return interaction.reply({ content: "Панель доступна только на сервере.", flags: MessageFlags.Ephemeral });
-    if (!isOwner(interaction) && !hasGuildAdmin(interaction) && !allowed(interaction, "all")) {
+    if (!isOwner(interaction) && !hasGuildAdmin(interaction) && !Object.keys(SECTIONS).some((section) => allowed(interaction, section))) {
       return interaction.reply({ content: "⛔ Нет доступа к административной панели. Нужны права администратора или назначенная роль персонала.", flags: MessageFlags.Ephemeral });
     }
     await interaction.reply({ embeds: [mainEmbed(interaction.guild)], components: mainRows(), flags: MessageFlags.Ephemeral });
@@ -125,6 +125,10 @@ module.exports = {
       if (section === "roles") {
         const roles = interaction.guild.roles.cache.filter(r => r.id !== interaction.guildId && !r.managed).sort((a,b) => b.position-a.position).first(25);
         const options = roles.map(r => ({ label: r.name.slice(0,100), value: r.id, description: `Роль · ${r.id}`.slice(0,100) }));
+        if (!options.length) {
+          await interaction.reply({ content: "На сервере нет подходящих ролей для назначения доступа.", components: [backRow()], flags: MessageFlags.Ephemeral });
+          return true;
+        }
         await interaction.reply({ content: "Выбери роль, которой нужно выдать или снять доступ к разделам панели.", components: [
           new ActionRowBuilder().addComponents(new StringSelectMenuBuilder().setCustomId("ha:roles:select").setPlaceholder("Выбери роль").addOptions(options)),
           new ActionRowBuilder().addComponents(new StringSelectMenuBuilder().setCustomId("ha:roles:section").setPlaceholder("Раздел доступа").addOptions(
@@ -228,7 +232,11 @@ module.exports = {
     }
     if (id === "ha:rp:toggle") {
       if (!allowed(interaction,"rp")) { await interaction.reply({content:"⛔ Нет доступа.",flags:MessageFlags.Ephemeral});return true; }
-      const modal=idModal("ha:modal:rptoggle","Переключить RP-действие","ID действия","Например: 12");
+      const modal = new ModalBuilder().setCustomId("ha:modal:rptoggle").setTitle("Переключить RP-действие");
+      modal.addComponents(new ActionRowBuilder().addComponents(
+        new TextInputBuilder().setCustomId("target_id").setLabel("Числовой ID действия").setPlaceholder("Например: 12")
+          .setStyle(TextInputStyle.Short).setMinLength(1).setMaxLength(10).setRequired(true),
+      ));
       await interaction.showModal(modal);return true;
     }
     if (interaction.isModalSubmit() && id === "ha:modal:user") {
