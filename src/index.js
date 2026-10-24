@@ -27,9 +27,19 @@ for (const file of fs.readdirSync(commandsDir).filter((name) => name.endsWith(".
 }
 const adminPanel = client.commands.get("admin");
 
-client.once(Events.ClientReady, (readyClient) => {
+client.once(Events.ClientReady, async (readyClient) => {
   logger.info(`Logged in as ${readyClient.user.tag} (${readyClient.user.id})`);
   logger.info(`Connected to ${readyClient.guilds.cache.size} guild(s).`);
+
+  // Register slash commands automatically so Pterodactyl deployments do not
+  // need a separate manual "npm run deploy:commands" step.
+  try {
+    const payload = [...client.commands.values()].map((command) => command.data.toJSON());
+    await readyClient.application.commands.set(payload, config.guildId);
+    logger.info(`Automatically registered ${payload.length} guild slash command(s).`);
+  } catch (error) {
+    logger.error("Automatic slash-command registration failed.", error);
+  }
 });
 
 client.on(Events.InteractionCreate, async (interaction) => {
