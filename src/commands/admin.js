@@ -1,5 +1,5 @@
 const {
-  SlashCommandBuilder, PermissionFlagsBits, MessageFlags, EmbedBuilder,
+  SlashCommandBuilder, PermissionFlagsBits, ChannelType, MessageFlags, EmbedBuilder,
   ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder,
   ModalBuilder, TextInputBuilder, TextInputStyle,
 } = require("discord.js");
@@ -237,9 +237,13 @@ module.exports = {
       };
       if (resets[action]) {
         const [first, second, message] = resets[action];
-        const clear = (column) => db.prepare(`INSERT INTO guild_settings (guild_id, ${column}) VALUES (?, NULL) ON CONFLICT(guild_id) DO UPDATE SET ${column}=NULL, updated_at=CURRENT_TIMESTAMP`).run(interaction.guildId);
-        clear(first); if (second) clear(second);
-        audit(interaction.guildId, interaction.user.id, "setting_reset", null, action);
+        const reset = db.transaction(() => {
+          const clear = (column) => db.prepare(`INSERT INTO guild_settings (guild_id, ${column}) VALUES (?, NULL) ON CONFLICT(guild_id) DO UPDATE SET ${column}=NULL, updated_at=CURRENT_TIMESTAMP`).run(interaction.guildId);
+          clear(first);
+          if (second) clear(second);
+          audit(interaction.guildId, interaction.user.id, "setting_reset", null, action);
+        });
+        reset();
         await interaction.reply({ content: `✅ ${message}`, flags: MessageFlags.Ephemeral }); return true;
       }
       const definitions = {
@@ -268,25 +272,49 @@ module.exports = {
       const selected=columns[action];
       if(!selected){await interaction.reply({content:"Неизвестная настройка.",flags:MessageFlags.Ephemeral});return true;}
       let label="";
-      if(action==="autorole"){
-        const role=await interaction.guild.roles.fetch(target).catch(()=>null);
-        if(!role||role.id===interaction.guildId||role.managed||!role.editable){await interaction.reply({content:"Роль не найдена или бот не может её назначать. Проверь ID и иерархию ролей.",flags:MessageFlags.Ephemeral});return true;}
-        db.prepare("INSERT INTO guild_settings (guild_id, autorole_id) VALUES (?, ?) ON CONFLICT(guild_id) DO UPDATE SET autorole_id=excluded.autorole_id, updated_at=CURRENT_TIMESTAMP").run(interaction.guildId,role.id);
-        label=`Автоматическая роль: ${role.name}`;
-      } else {
-        const channel=await interaction.guild.channels.fetch(target).catch(()=>null);
-        if(!channel||!channel.isTextBased()||!channel.isSendable()){await interaction.reply({content:"Канал не найден или в него нельзя отправлять сообщения. Укажи ID текстового канала.",flags:MessageFlags.Ephemeral});return true;}
-        db.prepare(`INSERT INTO guild_settings (guild_id, ${selected[0]}) VALUES (?, ?) ON CONFLICT(guild_id) DO UPDATE SET ${selected[0]}=excluded.${selected[0]}, updated_at=CURRENT_TIMESTAMP`).run(interaction.guildId,channel.id);
-        label=`Канал: #${channel.name}`;
-        if(selected[1]){
-          const message=interaction.fields.getTextInputValue("message").trim();
-          if(message){
-            db.prepare(`INSERT INTO guild_settings (guild_id, ${selected[1]}) VALUES (?, ?) ON CONFLICT(guild_id) DO UPDATE SET ${selected[1]}=excluded.${selected[1]}, updated_at=CURRENT_TIMESTAMP`).run(interaction.guildId,message);
-            label += " · текст обновлён";
+      const persist = db.transaction(() => {
+        if(action==="autorole"){
+          const role=interaction.guild.roles.cache.get(target);
+          if(!role||role.id===interaction.guildId||role.managed||!role.editable){
+            return { error: "role" };
+          }
+          db.prepare("INSERT INTO guild_settings (guild_id, autorole_id) VALUES (?, ?) ON CONFLICT(guild_id) DO UPDATE SET autorole_id=excluded.autorole_id, updated_at=CURRENT_TIMESTAMP").run(interaction.guildId,role.id);
+          label=`Автоматическая роль: ${role.name}`;
+        } else {
+          const channel=interaction.guild.channels.cache.get(target);
+          if(!channel||![ChannelType.GuildText, ChannelType.GuildAnnouncement].includes(channel.type)||!channel.isSendable()){
+            return { error: "channel" };
+          }
+          const botMember=interaction.guild.members.me;
+          const permissions=botMember ? channel.permissionsFor(botMember) : null;
+          if(!permissions?.has([PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages])){
+            return { error: "permissions" };
+          }
+          db.prepare(`INSERT INTO guild_settings (guild_id, ${selected[0]}) VALUES (?, ?) ON CONFLICT(guild_id) DO UPDATE SET ${selected[0]}=excluded.${selected[0]}, updated_at=CURRENT_TIMESTAMP`).run(interaction.guildId,channel.id);
+          label=`Канал: #${channel.name}`;
+          if(selected[1]){
+            const message=interaction.fields.getTextInputValue("message").trim();
+            if(message){
+              db.prepare(`INSERT INTO guild_settings (guild_id, ${selected[1]}) VALUES (?, ?) ON CONFLICT(guild_id) DO UPDATE SET ${selected[1]}=excluded.${selected[1]}, updated_at=CURRENT_TIMESTAMP`).run(interaction.guildId,message);
+              label += " · текст обновлён";
+            } else {
+              label += " · текст не изменён";
+            }
           }
         }
+        audit(interaction.guildId,interaction.user.id,"setting_updated",target,`${action}: ${label}`);
+        return { ok: true };
+      });
+      const result=persist();
+      if(result.error==="role"){
+        await interaction.reply({content:"Роль не найдена или бот не может её назначать. Проверь ID и иерархию ролей.",flags:MessageFlags.Ephemeral});return true;
       }
-      audit(interaction.guildId,interaction.user.id,"setting_updated",target,`${action}: ${label}`);
+      if(result.error==="channel"){
+        await interaction.reply({content:"Канал не найден или выбран не обычный текстовый канал. Укажи ID текстового канала или канала объявлений.",flags:MessageFlags.Ephemeral});return true;
+      }
+      if(result.error==="permissions"){
+        await interaction.reply({content:"У бота нет прав «Просмотр канала» и «Отправка сообщений» в выбранном канале. Выдай права и повтори настройку.",flags:MessageFlags.Ephemeral});return true;
+      }
       await interaction.reply({content:`✅ Настройка сохранена. ${label}${action==="welcome"||action==="goodbye"?"\nПеременные в тексте: {user} и {server}.":""}`,flags:MessageFlags.Ephemeral});return true;
     }
     if (id === "ha:user:lookup" || id === "ha:user:xp") {
