@@ -110,10 +110,23 @@ module.exports = {
       else await interaction.reply(payload);
       return true;
     }
-    if (interaction.isButton() && id.startsWith("ha:")) {
+    // Only the seven top-level section buttons are checked here. Previously
+    // this caught every "ha:*" button, including nested actions such as
+    // ha:user:lookup and ha:mod:prepare, and rejected them as unknown sections
+    // before their own handlers could run.
+    if (interaction.isButton() && Object.prototype.hasOwnProperty.call(SECTIONS, id.slice(3))) {
       const section = id.slice(3);
-      if (!SECTIONS[section] || !allowed(interaction, section)) {
-        await interaction.reply({ content: "⛔ У тебя нет разрешения на этот раздел.", flags: MessageFlags.Ephemeral }); return true;
+      if (!allowed(interaction, section)) {
+        const roleIds = interaction.member?.roles?.cache
+          ? [...interaction.member.roles.cache.keys()]
+          : Array.isArray(interaction.member?.roles) ? interaction.member.roles : [];
+        const admin = hasGuildAdmin(interaction);
+        const owner = isOwner(interaction);
+        await interaction.reply({
+          content: `⛔ Нет доступа к разделу «${SECTIONS[section][0]}». Причина: ${owner ? "владелец" : admin ? "администратор" : roleIds.length ? "ни одна из твоих ролей не выдана для этого раздела в панели" : "не удалось получить роли участника"}. Обратись к владельцу сервера или администратору, чтобы выдать доступ через «Роли и права».`,
+          flags: MessageFlags.Ephemeral
+        });
+        return true;
       }
       if (section === "users") {
         await interaction.reply({ content: "Выбери действие с участником.", components: [
