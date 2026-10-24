@@ -158,8 +158,8 @@ module.exports = {
         const row = db.prepare("SELECT * FROM guild_settings WHERE guild_id=?").get(interaction.guildId);
         const embed = new EmbedBuilder().setColor(0x5865f2).setTitle("⚙️ Настройки сервера")
           .addFields(
-            {name:"Приветствия",value:row?.welcome_channel_id ? `Канал: <#${row.welcome_channel_id}>\nТекст: ${row.welcome_message || "по умолчанию"}` : "Не настроено",inline:true},
-            {name:"Сообщения об уходе",value:row?.goodbye_channel_id ? `Канал: <#${row.goodbye_channel_id}>\nТекст: ${row.goodbye_message || "по умолчанию"}` : "Не настроено",inline:true},
+            {name:"Приветствия",value:row?.welcome_channel_id ? `Канал: <#${row.welcome_channel_id}>\nТекст: ${(row.welcome_message || "по умолчанию").slice(0,850)}` : "Не настроено",inline:true},
+            {name:"Сообщения об уходе",value:row?.goodbye_channel_id ? `Канал: <#${row.goodbye_channel_id}>\nТекст: ${(row.goodbye_message || "по умолчанию").slice(0,850)}` : "Не настроено",inline:true},
             {name:"Автоматическая роль",value:row?.autorole_id ? `<@&${row.autorole_id}>` : "Не настроено",inline:true},
             {name:"Журнал модерации",value:row?.mod_log_channel_id ? `<#${row.mod_log_channel_id}>` : "Не настроено",inline:true},
           ).setDescription("Подробное редактирование уже доступно через /serverconfig.");
