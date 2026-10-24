@@ -46,7 +46,22 @@ function interaction(subcommand, options = {}) {
 }
 
 
-function adminInteraction(customId, fields = {}, { channel = null } = {}) {
+
+function testChannel(id, name) {
+  return {
+    id,
+    name,
+    type: ChannelType.GuildText,
+    isTextBased: () => true,
+    isSendable: () => true,
+    permissionsFor: () => ({ has: (permissions) =>
+      Array.isArray(permissions) &&
+      permissions.includes(PermissionFlagsBits.ViewChannel) &&
+      permissions.includes(PermissionFlagsBits.SendMessages) }),
+  };
+}
+
+function adminInteraction(customId, fields = {}, { channel = null, role = null } = {}) {
   const ctx = interaction("unused");
   ctx.customId = customId;
   ctx.guild = {
@@ -55,7 +70,7 @@ function adminInteraction(customId, fields = {}, { channel = null } = {}) {
       fetch: async (id) => channel?.id === id ? channel : null,
     },
     members: { fetchMe: async () => ({ id: "12345678901234570" }) },
-    roles: { fetch: async () => null },
+    roles: { fetch: async (id) => role?.id === id ? role : null },
   };
   ctx.member = { roles: { cache: new Map() } };
   ctx.client.config = { ownerIds: [userId] };
@@ -189,6 +204,61 @@ async function main() {
     assert.equal(row.welcome_message, "Welcome {user} to {server}");
     assert.equal(db.prepare("SELECT COUNT(*) n FROM admin_audit WHERE guild_id=?").get(guildId).n, 5);
     assert.match(ctx.lastReply.content, /Настройка сохранена/);
+  });
+
+
+  await test("admin panel saves goodbye channel and custom message", async () => {
+    const channel = testChannel("12345678901234578", "goodbye");
+    const ctx = adminInteraction("ha:modal:setting:goodbye", {
+      target_id: channel.id,
+      message: "Goodbye {user}",
+    }, { channel });
+    await adminPanel.handle(ctx);
+    const row = db.prepare("SELECT goodbye_channel_id,goodbye_message FROM guild_settings WHERE guild_id=?").get(guildId);
+    assert.equal(row.goodbye_channel_id, channel.id);
+    assert.equal(row.goodbye_message, "Goodbye {user}");
+    assert.equal(db.prepare("SELECT COUNT(*) n FROM admin_audit WHERE guild_id=?").get(guildId).n, 6);
+  });
+
+  await test("admin panel saves moderation-log channel", async () => {
+    const channel = testChannel("12345678901234579", "mod-log");
+    const ctx = adminInteraction("ha:modal:setting:modlog", { target_id: channel.id }, { channel });
+    await adminPanel.handle(ctx);
+    assert.equal(db.prepare("SELECT mod_log_channel_id FROM guild_settings WHERE guild_id=?").get(guildId).mod_log_channel_id, channel.id);
+    assert.equal(db.prepare("SELECT COUNT(*) n FROM admin_audit WHERE guild_id=?").get(guildId).n, 7);
+  });
+
+  await test("admin panel saves a manageable automatic role", async () => {
+    const role = { id: "12345678901234580", name: "Member", managed: false, editable: true };
+    const ctx = adminInteraction("ha:modal:setting:autorole", { target_id: role.id }, { role });
+    await adminPanel.handle(ctx);
+    assert.equal(db.prepare("SELECT autorole_id FROM guild_settings WHERE guild_id=?").get(guildId).autorole_id, role.id);
+    assert.equal(db.prepare("SELECT COUNT(*) n FROM admin_audit WHERE guild_id=?").get(guildId).n, 8);
+  });
+
+  await test("admin panel reset-goodbye clears both goodbye fields", async () => {
+    const ctx = adminInteraction("ha:settings:reset-goodbye");
+    await adminPanel.handle(ctx);
+    const row = db.prepare("SELECT goodbye_channel_id,goodbye_message FROM guild_settings WHERE guild_id=?").get(guildId);
+    assert.equal(row.goodbye_channel_id, null);
+    assert.equal(row.goodbye_message, null);
+    assert.equal(db.prepare("SELECT COUNT(*) n FROM admin_audit WHERE guild_id=?").get(guildId).n, 9);
+  });
+
+  await test("admin panel reset-autorole clears only the automatic role", async () => {
+    const ctx = adminInteraction("ha:settings:reset-autorole");
+    await adminPanel.handle(ctx);
+    const row = db.prepare("SELECT autorole_id,mod_log_channel_id FROM guild_settings WHERE guild_id=?").get(guildId);
+    assert.equal(row.autorole_id, null);
+    assert.equal(row.mod_log_channel_id, "12345678901234579");
+    assert.equal(db.prepare("SELECT COUNT(*) n FROM admin_audit WHERE guild_id=?").get(guildId).n, 10);
+  });
+
+  await test("admin panel reset-modlog clears the moderation-log channel", async () => {
+    const ctx = adminInteraction("ha:settings:reset-modlog");
+    await adminPanel.handle(ctx);
+    assert.equal(db.prepare("SELECT mod_log_channel_id FROM guild_settings WHERE guild_id=?").get(guildId).mod_log_channel_id, null);
+    assert.equal(db.prepare("SELECT COUNT(*) n FROM admin_audit WHERE guild_id=?").get(guildId).n, 11);
   });
 
   console.log(`[test-settings] Passed ${passed} integration checks.`);
