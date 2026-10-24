@@ -87,7 +87,11 @@ module.exports = {
     try {
       if (subcommand === "status") {
         const row = getSettings(interaction.guildId);
-        const value = (v) => v || "Не настроено";
+        // Discord embed field values are limited to 1024 characters.
+        const value = (v) => {
+          const text = String(v || "Не настроено");
+          return text.length > 900 ? `${text.slice(0, 897)}…` : text;
+        };
         const embed = new EmbedBuilder()
           .setColor(0x5865f2)
           .setTitle("⚙️ Настройки сервера")
@@ -198,10 +202,16 @@ module.exports = {
       return interaction.reply({ content: action.reply(value), flags: MessageFlags.Ephemeral });
     } catch (error) {
       interaction.client.logger?.error?.("Could not apply server configuration.", error);
-      return interaction.reply({
+      const payload = {
         content: "⚠️ Не удалось сохранить настройку. Проверь права бота и журнал запуска.",
         flags: MessageFlags.Ephemeral,
-      });
+      };
+      if (interaction.deferred || interaction.replied) {
+        return interaction.followUp(payload).catch((replyError) => {
+          interaction.client.logger?.error?.("Could not send server configuration error response.", replyError);
+        });
+      }
+      return interaction.reply(payload);
     }
   },
 };
