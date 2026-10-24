@@ -9,7 +9,6 @@ const SECTIONS = {
   users: ["👥 Участники", "Просмотр профилей и статистики участников."],
   moderation: ["🛡️ Модерация", "Наказания и журнал модерации."],
   roles: ["👑 Роли и права", "Назначение ролей доступа к панели."],
-  rp: ["🎭 RP-действия", "Создание и управление ключевыми словами."],
   settings: ["⚙️ Настройки сервера", "Приветствия, роли и каналы."],
   stats: ["📊 Статистика", "Состояние сервера и активность."],
   logs: ["📜 Журнал аудита", "Последние действия администраторов."],
@@ -62,7 +61,6 @@ function mainRows() {
       new ButtonBuilder().setCustomId("ha:roles").setLabel("Роли и права").setEmoji("👑").setStyle(ButtonStyle.Secondary),
     ),
     new ActionRowBuilder().addComponents(
-      new ButtonBuilder().setCustomId("ha:rp").setLabel("RP-действия").setEmoji("🎭").setStyle(ButtonStyle.Secondary),
       new ButtonBuilder().setCustomId("ha:settings").setLabel("Настройки").setEmoji("⚙️").setStyle(ButtonStyle.Secondary),
       new ButtonBuilder().setCustomId("ha:stats").setLabel("Статистика").setEmoji("📊").setStyle(ButtonStyle.Secondary),
       new ButtonBuilder().setCustomId("ha:logs").setLabel("Аудит").setEmoji("📜").setStyle(ButtonStyle.Secondary),
@@ -155,22 +153,11 @@ module.exports = {
           new ActionRowBuilder().addComponents(new StringSelectMenuBuilder().setCustomId("ha:roles:select").setPlaceholder("Выбери роль").addOptions(options)),
           new ActionRowBuilder().addComponents(new StringSelectMenuBuilder().setCustomId("ha:roles:section").setPlaceholder("Раздел доступа").addOptions(
             {label:"Вся панель",value:"all"},{label:"Участники",value:"users"},{label:"Модерация",value:"moderation"},
-            {label:"RP-действия",value:"rp"},{label:"Настройки",value:"settings"},{label:"Статистика",value:"stats"},{label:"Аудит",value:"logs"}
+{label:"Настройки",value:"settings"},{label:"Статистика",value:"stats"},{label:"Аудит",value:"logs"}
           )),
           new ActionRowBuilder().addComponents(
             new ButtonBuilder().setCustomId("ha:roles:grant").setLabel("Выдать доступ").setStyle(ButtonStyle.Success),
             new ButtonBuilder().setCustomId("ha:roles:revoke").setLabel("Снять доступ").setStyle(ButtonStyle.Danger),
-          ), backRow(),
-        ], flags: MessageFlags.Ephemeral }); return true;
-      }
-      if (section === "rp") {
-        const rows = db.prepare("SELECT id,name,trigger_text,response,is_enabled FROM rp_actions WHERE guild_id=? ORDER BY id DESC LIMIT 10").all(interaction.guildId);
-        const embed = new EmbedBuilder().setColor(0x5865f2).setTitle("🎭 RP-действия")
-          .setDescription(rows.length ? rows.map(r => `**#${r.id} · ${r.name}** — ${r.is_enabled ? "🟢 включено" : "🔴 выключено"}\nТриггер: \`${r.trigger_text}\`\nОтвет: ${r.response.slice(0,120)}`).join("\n\n") : "Пока нет RP-действий.");
-        await interaction.reply({ embeds: [embed], components: [
-          new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId("ha:rp:create").setLabel("Создать действие").setStyle(ButtonStyle.Success),
-            new ButtonBuilder().setCustomId("ha:rp:toggle").setLabel("Включить/выключить").setStyle(ButtonStyle.Secondary),
           ), backRow(),
         ], flags: MessageFlags.Ephemeral }); return true;
       }
@@ -188,11 +175,10 @@ module.exports = {
       if (section === "stats") {
         const members = interaction.guild.memberCount;
         const cases = db.prepare("SELECT COUNT(*) n FROM moderation_cases WHERE guild_id=?").get(interaction.guildId).n;
-        const actions = db.prepare("SELECT COUNT(*) n FROM rp_actions WHERE guild_id=?").get(interaction.guildId).n;
         const tickets = db.prepare("SELECT COUNT(*) n FROM tickets WHERE guild_id=? AND status='open'").get(interaction.guildId).n;
         const embed = new EmbedBuilder().setColor(0x57f287).setTitle("📊 Статистика")
           .addFields({name:"Участники сервера",value:String(members),inline:true},{name:"Случаи модерации",value:String(cases),inline:true},
-            {name:"RP-действия",value:String(actions),inline:true},{name:"Открытые тикеты",value:String(tickets),inline:true})
+            {name:"Открытые тикеты",value:String(tickets),inline:true})
           .setTimestamp();
         await interaction.reply({ embeds:[embed], components:[backRow()], flags:MessageFlags.Ephemeral }); return true;
       }
@@ -241,25 +227,6 @@ module.exports = {
         audit(interaction.guildId,interaction.user.id,"access_revoked",state.roleId,state.section);
       }
       await interaction.reply({content:id.endsWith("grant")?"✅ Доступ выдан.":"✅ Доступ снят.",flags:MessageFlags.Ephemeral});return true;
-    }
-    if (id === "ha:rp:create") {
-      if (!allowed(interaction,"rp")) { await interaction.reply({content:"⛔ Нет доступа.",flags:MessageFlags.Ephemeral});return true; }
-      const modal=new ModalBuilder().setCustomId("ha:modal:rpcreate").setTitle("Новое RP-действие");
-      modal.addComponents(
-        new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId("name").setLabel("Название").setStyle(TextInputStyle.Short).setMaxLength(80).setRequired(true)),
-        new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId("trigger").setLabel("Ключевое слово / фраза").setStyle(TextInputStyle.Short).setMaxLength(100).setRequired(true)),
-        new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId("response").setLabel("Ответ бота").setStyle(TextInputStyle.Paragraph).setMaxLength(1500).setRequired(true)),
-      );
-      await interaction.showModal(modal);return true;
-    }
-    if (id === "ha:rp:toggle") {
-      if (!allowed(interaction,"rp")) { await interaction.reply({content:"⛔ Нет доступа.",flags:MessageFlags.Ephemeral});return true; }
-      const modal = new ModalBuilder().setCustomId("ha:modal:rptoggle").setTitle("Переключить RP-действие");
-      modal.addComponents(new ActionRowBuilder().addComponents(
-        new TextInputBuilder().setCustomId("target_id").setLabel("Числовой ID действия").setPlaceholder("Например: 12")
-          .setStyle(TextInputStyle.Short).setMinLength(1).setMaxLength(10).setRequired(true),
-      ));
-      await interaction.showModal(modal);return true;
     }
     if (interaction.isModalSubmit() && id === "ha:modal:user") {
       if(!allowed(interaction,"users")){await interaction.reply({content:"⛔ Нет доступа.",flags:MessageFlags.Ephemeral});return true;}
@@ -334,25 +301,6 @@ module.exports = {
         await interaction.update({content:`✅ Выполнено: ${action} для <@${target}>.\nПричина: ${state.reason}`,components:[]});
       }catch(error){await interaction.reply({content:`⚠️ ${error.message||"Не удалось выполнить действие."}`,flags:MessageFlags.Ephemeral});}
       return true;
-    }
-    if (interaction.isModalSubmit() && id === "ha:modal:rpcreate") {
-      if(!allowed(interaction,"rp")){await interaction.reply({content:"⛔ Нет доступа.",flags:MessageFlags.Ephemeral});return true;}
-      const name=interaction.fields.getTextInputValue("name").trim(), trigger=interaction.fields.getTextInputValue("trigger").trim().toLocaleLowerCase("ru"), response=interaction.fields.getTextInputValue("response").trim();
-      const exists=db.prepare("SELECT id FROM rp_actions WHERE guild_id=? AND lower(trigger_text)=lower(?)").get(interaction.guildId,trigger);
-      if(exists){await interaction.reply({content:"Такой триггер уже используется. Выбери уникальный.",flags:MessageFlags.Ephemeral});return true;}
-      const result=db.prepare("INSERT INTO rp_actions(guild_id,name,trigger_text,response,created_by,is_enabled) VALUES(?,?,?,?,?,1)").run(interaction.guildId,name,trigger,response,interaction.user.id);
-      audit(interaction.guildId,interaction.user.id,"rp_action_created",String(result.lastInsertRowid),trigger);
-      await interaction.reply({content:`✅ RP-действие «${name}» создано (ID ${result.lastInsertRowid}).`,flags:MessageFlags.Ephemeral});return true;
-    }
-    if (interaction.isModalSubmit() && id === "ha:modal:rptoggle") {
-      if(!allowed(interaction,"rp")){await interaction.reply({content:"⛔ Нет доступа.",flags:MessageFlags.Ephemeral});return true;}
-      const value=interaction.fields.getTextInputValue("target_id").trim(), actionId=Number(value);
-      if(!Number.isSafeInteger(actionId)||actionId<1){await interaction.reply({content:"Укажи числовой ID RP-действия.",flags:MessageFlags.Ephemeral});return true;}
-      const row=db.prepare("SELECT is_enabled,name FROM rp_actions WHERE guild_id=? AND id=?").get(interaction.guildId,actionId);
-      if(!row){await interaction.reply({content:"Действие не найдено.",flags:MessageFlags.Ephemeral});return true;}
-      db.prepare("UPDATE rp_actions SET is_enabled=? WHERE guild_id=? AND id=?").run(row.is_enabled?0:1,interaction.guildId,actionId);
-      audit(interaction.guildId,interaction.user.id,"rp_action_toggled",String(actionId),row.is_enabled?"disabled":"enabled");
-      await interaction.reply({content:`✅ «${row.name}»: ${row.is_enabled?"выключено":"включено"}.`,flags:MessageFlags.Ephemeral});return true;
     }
     return true;
   },
