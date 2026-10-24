@@ -29,7 +29,9 @@ function hasGuildAdmin(interaction) {
 function allowed(interaction, section) {
   if (!interaction.guild || !interaction.member) return false;
   if (isOwner(interaction) || hasGuildAdmin(interaction)) return true;
-  const roleIds = interaction.member.roles?.cache ? [...interaction.member.roles.cache.keys()] : [];
+  const roleIds = interaction.member.roles?.cache
+    ? [...interaction.member.roles.cache.keys()]
+    : Array.isArray(interaction.member.roles) ? interaction.member.roles : [];
   if (!roleIds.length) return false;
   const placeholders = roleIds.map(() => "?").join(",");
   const row = db.prepare(`SELECT 1 FROM admin_access_roles WHERE guild_id=? AND section IN (?, 'all') AND role_id IN (${placeholders}) LIMIT 1`)
