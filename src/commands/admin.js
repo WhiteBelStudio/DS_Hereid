@@ -272,26 +272,31 @@ module.exports = {
       const selected=columns[action];
       if(!selected){await interaction.reply({content:"Неизвестная настройка.",flags:MessageFlags.Ephemeral});return true;}
       let label="";
+      let selectedRole = null;
+      let selectedChannel = null;
+      if(action==="autorole"){
+        selectedRole=await interaction.guild.roles.fetch(target).catch(()=>null);
+        if(!selectedRole||selectedRole.id===interaction.guildId||selectedRole.managed||!selectedRole.editable){
+          await interaction.reply({content:"Роль не найдена или бот не может её назначать. Проверь ID и иерархию ролей.",flags:MessageFlags.Ephemeral});return true;
+        }
+      } else {
+        selectedChannel=await interaction.guild.channels.fetch(target).catch(()=>null);
+        if(!selectedChannel||![ChannelType.GuildText, ChannelType.GuildAnnouncement].includes(selectedChannel.type)||!selectedChannel.isSendable()){
+          await interaction.reply({content:"Канал не найден или выбран не обычный текстовый канал. Укажи ID текстового канала или канала объявлений.",flags:MessageFlags.Ephemeral});return true;
+        }
+        const botMember=await interaction.guild.members.fetchMe();
+        const permissions=selectedChannel.permissionsFor(botMember);
+        if(!permissions?.has([PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages])){
+          await interaction.reply({content:"У бота нет прав «Просмотр канала» и «Отправка сообщений» в выбранном канале. Выдай права и повтори настройку.",flags:MessageFlags.Ephemeral});return true;
+        }
+      }
       const persist = db.transaction(() => {
         if(action==="autorole"){
-          const role=interaction.guild.roles.cache.get(target);
-          if(!role||role.id===interaction.guildId||role.managed||!role.editable){
-            return { error: "role" };
-          }
-          db.prepare("INSERT INTO guild_settings (guild_id, autorole_id) VALUES (?, ?) ON CONFLICT(guild_id) DO UPDATE SET autorole_id=excluded.autorole_id, updated_at=CURRENT_TIMESTAMP").run(interaction.guildId,role.id);
-          label=`Автоматическая роль: ${role.name}`;
+          db.prepare("INSERT INTO guild_settings (guild_id, autorole_id) VALUES (?, ?) ON CONFLICT(guild_id) DO UPDATE SET autorole_id=excluded.autorole_id, updated_at=CURRENT_TIMESTAMP").run(interaction.guildId,selectedRole.id);
+          label=`Автоматическая роль: ${selectedRole.name}`;
         } else {
-          const channel=interaction.guild.channels.cache.get(target);
-          if(!channel||![ChannelType.GuildText, ChannelType.GuildAnnouncement].includes(channel.type)||!channel.isSendable()){
-            return { error: "channel" };
-          }
-          const botMember=interaction.guild.members.me;
-          const permissions=botMember ? channel.permissionsFor(botMember) : null;
-          if(!permissions?.has([PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages])){
-            return { error: "permissions" };
-          }
-          db.prepare(`INSERT INTO guild_settings (guild_id, ${selected[0]}) VALUES (?, ?) ON CONFLICT(guild_id) DO UPDATE SET ${selected[0]}=excluded.${selected[0]}, updated_at=CURRENT_TIMESTAMP`).run(interaction.guildId,channel.id);
-          label=`Канал: #${channel.name}`;
+          db.prepare(`INSERT INTO guild_settings (guild_id, ${selected[0]}) VALUES (?, ?) ON CONFLICT(guild_id) DO UPDATE SET ${selected[0]}=excluded.${selected[0]}, updated_at=CURRENT_TIMESTAMP`).run(interaction.guildId,selectedChannel.id);
+          label=`Канал: #${selectedChannel.name}`;
           if(selected[1]){
             const message=interaction.fields.getTextInputValue("message").trim();
             if(message){
@@ -303,18 +308,8 @@ module.exports = {
           }
         }
         audit(interaction.guildId,interaction.user.id,"setting_updated",target,`${action}: ${label}`);
-        return { ok: true };
       });
-      const result=persist();
-      if(result.error==="role"){
-        await interaction.reply({content:"Роль не найдена или бот не может её назначать. Проверь ID и иерархию ролей.",flags:MessageFlags.Ephemeral});return true;
-      }
-      if(result.error==="channel"){
-        await interaction.reply({content:"Канал не найден или выбран не обычный текстовый канал. Укажи ID текстового канала или канала объявлений.",flags:MessageFlags.Ephemeral});return true;
-      }
-      if(result.error==="permissions"){
-        await interaction.reply({content:"У бота нет прав «Просмотр канала» и «Отправка сообщений» в выбранном канале. Выдай права и повтори настройку.",flags:MessageFlags.Ephemeral});return true;
-      }
+      persist();
       await interaction.reply({content:`✅ Настройка сохранена. ${label}${action==="welcome"||action==="goodbye"?"\nПеременные в тексте: {user} и {server}.":""}`,flags:MessageFlags.Ephemeral});return true;
     }
     if (id === "ha:user:lookup" || id === "ha:user:xp") {
