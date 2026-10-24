@@ -61,11 +61,24 @@ function testChannel(id, name) {
   };
 }
 
+
+function adminButtonInteraction(customId) {
+  const ctx = adminInteraction(customId);
+  ctx.isButton = () => true;
+  ctx.showModal = async (modal) => {
+    ctx.lastModal = modal;
+    return modal;
+  };
+  return ctx;
+}
+
 function adminInteraction(customId, fields = {}, { channel = null, role = null } = {}) {
   const ctx = interaction("unused");
   ctx.customId = customId;
   ctx.guild = {
     ownerId: userId,
+    name: "HeradeLegend test server",
+    memberCount: 5,
     channels: {
       fetch: async (id) => channel?.id === id ? channel : null,
     },
@@ -259,6 +272,27 @@ async function main() {
     await adminPanel.handle(ctx);
     assert.equal(db.prepare("SELECT mod_log_channel_id FROM guild_settings WHERE guild_id=?").get(guildId).mod_log_channel_id, null);
     assert.equal(db.prepare("SELECT COUNT(*) n FROM admin_audit WHERE guild_id=?").get(guildId).n, 11);
+  });
+
+
+  await test("admin settings panel exposes all setting and reset controls", async () => {
+    const ctx = adminButtonInteraction("ha:settings");
+    await adminPanel.handle(ctx);
+    const ids = ctx.lastReply.components.flatMap((row) => row.components.map((component) => component.data.custom_id));
+    for (const id of [
+      "ha:settings:welcome", "ha:settings:goodbye", "ha:settings:autorole", "ha:settings:modlog",
+      "ha:settings:reset-welcome", "ha:settings:reset-goodbye",
+      "ha:settings:reset-autorole", "ha:settings:reset-modlog",
+    ]) assert.ok(ids.includes(id), `missing control: ${id}`);
+  });
+
+  await test("each settings button opens the matching modal", async () => {
+    for (const action of ["welcome", "goodbye", "autorole", "modlog"]) {
+      const ctx = adminButtonInteraction(`ha:settings:${action}`);
+      await adminPanel.handle(ctx);
+      assert.equal(ctx.lastModal.toJSON().custom_id, `ha:modal:setting:${action}`);
+      assert.equal(ctx.lastModal.toJSON().components.length, action === "welcome" || action === "goodbye" ? 2 : 1);
+    }
   });
 
   console.log(`[test-settings] Passed ${passed} integration checks.`);
