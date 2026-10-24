@@ -95,7 +95,7 @@ module.exports = {
     }
     const id = interaction.customId;
     if (id === "ha:home" || id === "ha:refresh") {
-      if (!isOwner(interaction) && !hasGuildAdmin(interaction) && !allowed(interaction, "all")) {
+      if (!isOwner(interaction) && !hasGuildAdmin(interaction) && !Object.keys(SECTIONS).some((section) => allowed(interaction, section))) {
         await interaction.reply({ content: "⛔ Нет доступа.", flags: MessageFlags.Ephemeral }); return true;
       }
       const payload = { embeds: [mainEmbed(interaction.guild)], components: mainRows(), flags: MessageFlags.Ephemeral };
