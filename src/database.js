@@ -69,20 +69,8 @@ db.exec(`
     details TEXT,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   );
-  CREATE TABLE IF NOT EXISTS rp_actions (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    guild_id TEXT NOT NULL,
-    name TEXT NOT NULL,
-    trigger_text TEXT NOT NULL,
-    response TEXT NOT NULL,
-    created_by TEXT NOT NULL,
-    is_enabled INTEGER NOT NULL DEFAULT 1,
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(guild_id, trigger_text)
-  );
   CREATE INDEX IF NOT EXISTS idx_moderation_cases_guild_created ON moderation_cases(guild_id, created_at);
   CREATE INDEX IF NOT EXISTS idx_admin_audit_guild_id ON admin_audit(guild_id, id);
-  CREATE INDEX IF NOT EXISTS idx_rp_actions_guild_enabled ON rp_actions(guild_id, is_enabled);
 `);
 
 logger.info(`SQLite database ready at ${filename}`);
