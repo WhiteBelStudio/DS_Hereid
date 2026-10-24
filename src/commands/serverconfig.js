@@ -38,6 +38,12 @@ function clearSetting(guildId, column) {
   `).run(guildId);
 }
 
+function auditSetting(guildId, actorId, action, details) {
+  db.prepare(
+    "INSERT INTO admin_audit (guild_id, actor_id, action, target_id, details) VALUES (?, ?, ?, NULL, ?)",
+  ).run(guildId, actorId, action, String(details || "").slice(0, 900));
+}
+
 function getSettings(guildId) {
   return db.prepare(`
     SELECT welcome_channel_id, welcome_message, goodbye_channel_id,
@@ -139,8 +145,12 @@ module.exports = {
 
       if (resets[subcommand]) {
         const [first, second, message] = resets[subcommand];
-        clearSetting(interaction.guildId, first);
-        if (second) clearSetting(interaction.guildId, second);
+        const reset = db.transaction(() => {
+          clearSetting(interaction.guildId, first);
+          if (second) clearSetting(interaction.guildId, second);
+          auditSetting(interaction.guildId, interaction.user.id, "server_setting_reset", subcommand);
+        });
+        reset();
         return interaction.reply({ content: message, flags: MessageFlags.Ephemeral });
       }
 
@@ -163,7 +173,28 @@ module.exports = {
         }
       }
 
-      saveSetting(interaction.guildId, action.column, value);
+      if (["welcome-channel", "goodbye-channel", "mod-log-channel"].includes(subcommand)) {
+        const channel = interaction.options.getChannel("channel");
+        const botMember = await interaction.guild.members.fetchMe();
+        const permissions = channel.permissionsFor(botMember);
+        if (!permissions?.has([PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages])) {
+          return interaction.reply({
+            content: "У бота нет прав «Просмотр канала» и «Отправка сообщений» в выбранном канале. Выдай права и повтори настройку.",
+            flags: MessageFlags.Ephemeral,
+          });
+        }
+      }
+
+      const persist = db.transaction(() => {
+        saveSetting(interaction.guildId, action.column, value);
+        auditSetting(
+          interaction.guildId,
+          interaction.user.id,
+          "server_setting_updated",
+          `${subcommand}: ${String(value).slice(0, 500)}`,
+        );
+      });
+      persist();
       return interaction.reply({ content: action.reply(value), flags: MessageFlags.Ephemeral });
     } catch (error) {
       interaction.client.logger?.error?.("Could not apply server configuration.", error);
