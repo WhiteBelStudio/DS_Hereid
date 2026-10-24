@@ -98,20 +98,7 @@ client.on(Events.GuildMemberRemove, async (member) => {
 client.on(Events.MessageCreate, async (message) => {
   if (!message.guild || message.author.bot) return;
 
-  // RP triggers are exact, case-insensitive matches to avoid accidental replies in normal conversation.
-  if (message.content && !message.content.startsWith("/")) {
-    try {
-      const normalized = message.content.trim().toLocaleLowerCase("ru");
-      const action = db.prepare(
-        "SELECT name,response FROM rp_actions WHERE guild_id=? AND is_enabled=1 AND lower(trigger_text)=lower(?) LIMIT 1"
-      ).get(message.guild.id, normalized);
-      if (action) {
-        await message.reply({ content: `**${action.name}**\n${action.response} `, allowedMentions: { repliedUser: false } });
-        return;
-      }
-    } catch (error) { logger.error("RP trigger handler failed.", error); }
-  }
-
+  // RP actions have been removed; messages are only checked by anti-spam detection.
   const now = Date.now();
   const key = `${message.guild.id}:${message.author.id}`;
   const recent = client._recentMessages || (client._recentMessages = new Map());
