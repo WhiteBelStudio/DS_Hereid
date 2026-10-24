@@ -263,7 +263,7 @@ module.exports = {
       if (!allowed(interaction, "settings")) { await interaction.reply({content:"⛔ Нет доступа.",flags:MessageFlags.Ephemeral}); return true; }
       const action=id.slice("ha:modal:setting:".length);
       const target=interaction.fields.getTextInputValue("target_id").trim();
-      if (!/^\\d{17,20}$/.test(target)) { await interaction.reply({content:"Некорректный Discord ID.",flags:MessageFlags.Ephemeral}); return true; }
+      if (!/^\d{17,20}$/.test(target)) { await interaction.reply({content:"Некорректный Discord ID.",flags:MessageFlags.Ephemeral}); return true; }
       const columns={welcome:["welcome_channel_id","welcome_message"],goodbye:["goodbye_channel_id","goodbye_message"],modlog:["mod_log_channel_id"],autorole:["autorole_id"]};
       const selected=columns[action];
       if(!selected){await interaction.reply({content:"Неизвестная настройка.",flags:MessageFlags.Ephemeral});return true;}
