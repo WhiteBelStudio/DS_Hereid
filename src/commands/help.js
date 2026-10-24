@@ -7,21 +7,27 @@ module.exports = {
       .setColor(0x5865f2)
       .setTitle("🕊 Дух Свободы — команды")
       .setDescription([
+        "**Основные команды**",
         "`/help` — список команд",
         "`/ping` — проверка отклика",
         "`/botinfo` — информация о боте",
         "",
-        "**Настройки сервера** (нужно право «Управление сервером»):",
+        "**Настройки сервера** (нужно право «Управление сервером»)",
+        "`/serverconfig status` — показать текущие настройки",
         "`/serverconfig welcome-channel` — канал приветствий",
         "`/serverconfig welcome-message` — текст приветствия",
         "`/serverconfig goodbye-channel` — канал сообщений об уходе",
         "`/serverconfig goodbye-message` — текст сообщения об уходе",
         "`/serverconfig autorole` — роль новым участникам",
         "`/serverconfig mod-log-channel` — канал журнала модерации",
+        "`/serverconfig reset-welcome` — отключить приветствия",
+        "`/serverconfig reset-goodbye` — отключить сообщения об уходе",
+        "`/serverconfig reset-autorole` — отключить автовыдачу роли",
+        "`/serverconfig reset-mod-log` — сбросить канал журнала",
         "",
-        "В текстах доступны переменные `{user}` и `{server}`.",
+        "В текстах приветствия и прощания доступны переменные `{user}` и `{server}`.",
       ].join("\n"))
       .setFooter({ text: "HeradeLegend • Дух Свободы 🕊" });
-    await interaction.reply({ embeds: [embed] });
+    await interaction.reply({ embeds: [embed], ephemeral: true });
   },
 };
