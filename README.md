@@ -1,53 +1,57 @@
 # Дух Свободы 🕊 — HeradeLegend Discord bot
 
-Universal Discord bot for community moderation and server utilities, built with JavaScript, Node.js 22 and discord.js 14 for Pterodactyl hosting.
+Universal Discord community bot built with Node.js 22, discord.js 14 and SQLite for Pterodactyl.
 
-## Foundation included
-- Discord login and structured console logging.
-- Slash commands: `/help`, `/ping`, `/botinfo`.
-- SQLite tables for guild settings, member statistics, moderation cases, and tickets; WAL mode, foreign keys, and a busy timeout are configured.
-- Startup validation for Discord IDs, required environment variables, and log level.
-- Project-wide JavaScript syntax check through `npm run check`.
-- Event-handler foundations for welcome/goodbye messages and automatic role assignment.
-- Basic repeated-message detection that logs suspicious activity only.
+## Features
 
-**Not implemented yet:** moderation punishments, configurable anti-raid enforcement, ticket workflows, XP/levels, economy, and management dashboard. These are planned for subsequent stages.
+- Discord login, structured logging and graceful shutdown.
+- Slash commands: `/help`, `/ping`, `/botinfo`, `/admin`, `/serverconfig`.
+- Interactive ephemeral administration panel with sections for member lookup, XP management, moderation, staff-role access, RP actions, server settings, statistics and audit.
+- Role-based access grants stored in SQLite; server Administrators and configured bot owners have full panel access.
+- Moderation actions: 10-minute timeout, kick and ban with required reason, hierarchy/permission checks, case history and optional mod-log channel.
+- RP action creation, enable/disable and exact phrase triggers.
+- SQLite tables for guild settings, member stats, moderation cases, tickets, admin access roles, audit and RP actions.
+- Welcome/goodbye messages and automatic role assignment.
+- Repeated-message spam detection (log-only; no automatic deletion or punishment).
 
-## Requirements
+## Requirements and setup
+
 - Node.js 22 or newer.
-- A Discord application and bot created in the Discord Developer Portal.
-- The bot invited to a test server.
+- A Discord application/bot and a test server.
+- Enable **Server Members Intent** and **Message Content Intent** in Discord Developer Portal.
+- Invite the bot with `bot` and `applications.commands` scopes and only the permissions required for the enabled features.
 
-## Discord setup
-1. Create an application at https://discord.com/developers/applications and add a Bot user.
-2. Copy the bot token into the Pterodactyl environment variable `DISCORD_TOKEN`. Never share or commit it.
-3. Copy the Application ID into `CLIENT_ID`.
-4. Set the test server ID as `GUILD_ID`.
-5. In Bot settings, enable **Server Members Intent** and **Message Content Intent**.
-6. Invite the bot using OAuth2 URL Generator with scopes `bot` and `applications.commands`. Grant only the permissions needed for testing.
+1. Copy `.env.example` to `.env` and set `DISCORD_TOKEN`, `CLIENT_ID`, `GUILD_ID`.
+2. Optionally set `BOT_OWNER_IDS` to comma-separated Discord user IDs for bot owners.
+3. Install dependencies with `npm install`.
+4. Check syntax with `npm run check`.
+5. Register commands with `npm run deploy:commands`.
+6. Start with `npm start`.
 
-## Local setup
-1. Copy `.env.example` to `.env` and fill in the values.
-2. Install packages: `npm install`.
-3. Check the syntax of every JavaScript file: `npm run check`.
-4. Register guild slash commands: `npm run deploy:commands`.
-5. Start the bot: `npm start`.
+## Pterodactyl
 
-On Windows, copy the example file manually if `cp` is unavailable.
-
-## Pterodactyl setup
 - Use a Node.js 22 egg.
 - Install command: `npm install`.
 - Startup command: `npm start`.
-- Add `DISCORD_TOKEN`, `CLIENT_ID`, `GUILD_ID`, and optionally `DATABASE_PATH=./data/bot.sqlite` and `LOG_LEVEL=info` under Startup → Variables. Alternatively upload a local `.env` only if your hosting setup supports it.
-- Keep the `data` directory persistent across restarts and reinstallations.
-- Run `npm run deploy:commands` once before the first start and again after changing command definitions.
+- Keep `data/bot.sqlite` persistent across restarts and reinstallations.
+- After command definitions change, run `npm run deploy:commands` again.
 
-## Current verification status
-- The repository files have been updated, but a live Discord login and a Pterodactyl startup have not been verified from this editing session.
-- Treat Stage 1 as in progress until `npm install` and `npm run check` succeed in the target environment.
+## Admin panel
 
-## Security and data
-- Never commit `.env` or expose your bot token.
-- Do not delete `data/bot.sqlite` if it contains data.
-- The anti-spam foundation currently only logs repeated messages; it does not delete messages or punish users.
+Use `/admin` in a server. Server Administrators and IDs listed in `BOT_OWNER_IDS` can manage panel access roles. Other staff members need a role granted access to one or more sections. Permissions are checked again when interactive components are used.
+
+The panel includes:
+- Member lookup and XP adjustments.
+- Timeout (10 minutes), kick and ban; each requires a reason and checks the Discord role hierarchy.
+- Per-section staff-role access grants.
+- RP action creation and enable/disable.
+- Current server configuration, summary statistics and audit log.
+- Moderation case history and optional posting to the configured moderation-log channel.
+
+## Data and safety notes
+
+- Existing SQLite files are preserved; tables are created with `CREATE TABLE IF NOT EXISTS`.
+- Never commit `.env` or share the bot token.
+- Ensure the bot role is above roles it must manage and has the necessary Discord permissions.
+- Spam detection remains log-only. It does not delete messages or issue automatic punishments.
+- A successful syntax check does not prove live Discord permissions, interactions, or Pterodactyl startup. Test these on a test server before using the panel on a production community.
