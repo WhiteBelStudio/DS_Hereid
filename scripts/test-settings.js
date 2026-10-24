@@ -3,6 +3,7 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 const { ChannelType, PermissionFlagsBits } = require("discord.js");
+const Database = require("better-sqlite3");
 
 const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "herade-settings-test-"));
 process.env.DATABASE_PATH = path.join(tempDir, "test.sqlite");
@@ -292,6 +293,27 @@ async function main() {
       await adminPanel.handle(ctx);
       assert.equal(ctx.lastModal.toJSON().custom_id, `ha:modal:setting:${action}`);
       assert.equal(ctx.lastModal.toJSON().components.length, action === "welcome" || action === "goodbye" ? 2 : 1);
+    }
+  });
+
+
+  await test("settings and member data survive closing and reopening SQLite", async () => {
+    const ctx = interaction("welcome-message", { message: "Persisted after restart: {user}" });
+    await command.execute(ctx);
+    const filename = process.env.DATABASE_PATH;
+    db.close();
+    const reopened = new Database(filename);
+    try {
+      assert.equal(
+        reopened.prepare("SELECT welcome_message FROM guild_settings WHERE guild_id=?").get(guildId).welcome_message,
+        "Persisted after restart: {user}",
+      );
+      assert.deepEqual(
+        reopened.prepare("SELECT xp,level,balance FROM member_stats WHERE guild_id=? AND user_id=?").get(guildId, userId),
+        { xp: 250, level: 3, balance: 40 },
+      );
+    } finally {
+      reopened.close();
     }
   });
 
