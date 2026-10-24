@@ -25,3 +25,5 @@ jobs:
         run: npm install
       - name: Check JavaScript syntax
         run: npm run check
+      - name: Test server settings persistence and permissions
+        run: npm test
