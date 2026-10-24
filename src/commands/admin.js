@@ -21,10 +21,17 @@ function audit(guildId, actorId, action, targetId = null, details = "") {
 }
 function isOwner(interaction) {
   const owners = interaction.client.config?.ownerIds || [];
-  return owners.includes(interaction.user.id);
+  // The owner of this Discord server must never be locked out by an empty
+  // BOT_OWNER_IDS setting.
+  return owners.includes(interaction.user.id) || interaction.user.id === interaction.guild?.ownerId;
 }
 function hasGuildAdmin(interaction) {
-  return Boolean(interaction.memberPermissions?.has(PermissionFlagsBits.Administrator));
+  // Manage Server is a trusted administrative permission too; Administrator
+  // remains supported as before.
+  return Boolean(
+    interaction.memberPermissions?.has(PermissionFlagsBits.Administrator) ||
+    interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild)
+  );
 }
 function allowed(interaction, section) {
   if (!interaction.guild || !interaction.member) return false;
