@@ -153,8 +153,10 @@ client.on(Events.GuildMemberAdd, async (member) => {
         const message = (settings.welcome_message || "Добро пожаловать, {user}, на сервер **{server}**!")
           .replaceAll("{user}", `<@${member.id}>`)
           .replaceAll("{server}", member.guild.name);
-        await channel.send({ content: message }).catch((error) =>
-          logger.warn("Welcome message could not be sent.", error));
+        await channel.send({
+          content: message,
+          allowedMentions: { parse: [], users: [member.id] },
+        }).catch((error) => logger.warn("Welcome message could not be sent.", error));
       }
     }
   } catch (error) {
@@ -175,8 +177,10 @@ client.on(Events.GuildMemberRemove, async (member) => {
     const message = (settings.goodbye_message || "Участник **{user}** покинул сервер.")
       .replaceAll("{user}", member.user?.tag || member.id)
       .replaceAll("{server}", member.guild.name);
-    await channel.send({ content: message }).catch((error) =>
-      logger.warn("Goodbye message could not be sent.", error));
+    await channel.send({
+      content: message,
+      allowedMentions: { parse: [] },
+    }).catch((error) => logger.warn("Goodbye message could not be sent.", error));
   } catch (error) {
     logger.error("Guild member remove handler failed.", error);
   }
