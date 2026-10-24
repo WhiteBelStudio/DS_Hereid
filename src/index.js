@@ -17,6 +17,7 @@ const client = new Client({
   ],
   partials: [Partials.Channel, Partials.Message, Partials.GuildMember, Partials.User],
 });
+client.config = config;
 
 client.commands = new Collection();
 const commandsDir = path.join(__dirname, "commands");
@@ -24,6 +25,7 @@ for (const file of fs.readdirSync(commandsDir).filter((name) => name.endsWith(".
   const command = require(path.join(commandsDir, file));
   client.commands.set(command.data.name, command);
 }
+const adminPanel = client.commands.get("admin");
 
 client.once(Events.ClientReady, (readyClient) => {
   logger.info(`Logged in as ${readyClient.user.tag} (${readyClient.user.id})`);
@@ -31,18 +33,23 @@ client.once(Events.ClientReady, (readyClient) => {
 });
 
 client.on(Events.InteractionCreate, async (interaction) => {
-  if (!interaction.isChatInputCommand()) return;
-  const command = client.commands.get(interaction.commandName);
-  if (!command) return logger.warn(`No handler for slash command: ${interaction.commandName}`);
   try {
-    await command.execute(interaction);
+    if (interaction.isChatInputCommand()) {
+      const command = client.commands.get(interaction.commandName);
+      if (!command) return logger.warn(`No handler for slash command: ${interaction.commandName}`);
+      await command.execute(interaction);
+      return;
+    }
+    if (adminPanel && (interaction.isButton() || interaction.isStringSelectMenu() || interaction.isModalSubmit())) {
+      await adminPanel.handle(interaction);
+    }
   } catch (error) {
-    logger.error(`Command /${interaction.commandName} failed.`, error);
-    const payload = { content: "⚠️ При выполнении команды произошла ошибка. Попробуйте позже.", ephemeral: true };
+    logger.error("Interaction handler failed.", error);
+    const payload = { content: "⚠️ При выполнении действия произошла ошибка. Проверь журнал бота.", ephemeral: true };
     if (interaction.deferred || interaction.replied) {
-      await interaction.followUp(payload).catch((e) => logger.error("Could not send command error response.", e));
+      await interaction.followUp(payload).catch((e) => logger.error("Could not send interaction error response.", e));
     } else {
-      await interaction.reply(payload).catch((e) => logger.error("Could not send command error response.", e));
+      await interaction.reply(payload).catch((e) => logger.error("Could not send interaction error response.", e));
     }
   }
 });
@@ -78,8 +85,23 @@ client.on(Events.GuildMemberRemove, async (member) => {
   } catch (error) { logger.error("Guild member remove handler failed.", error); }
 });
 
-client.on(Events.MessageCreate, (message) => {
+client.on(Events.MessageCreate, async (message) => {
   if (!message.guild || message.author.bot) return;
+
+  // RP triggers are exact, case-insensitive matches to avoid accidental replies in normal conversation.
+  if (message.content && !message.content.startsWith("/")) {
+    try {
+      const normalized = message.content.trim().toLocaleLowerCase("ru");
+      const action = db.prepare(
+        "SELECT name,response FROM rp_actions WHERE guild_id=? AND is_enabled=1 AND lower(trigger_text)=lower(?) LIMIT 1"
+      ).get(message.guild.id, normalized);
+      if (action) {
+        await message.reply({ content: `**${action.name}**\n${action.response} `, allowedMentions: { repliedUser: false } });
+        return;
+      }
+    } catch (error) { logger.error("RP trigger handler failed.", error); }
+  }
+
   const now = Date.now();
   const key = `${message.guild.id}:${message.author.id}`;
   const recent = client._recentMessages || (client._recentMessages = new Map());
@@ -88,7 +110,7 @@ client.on(Events.MessageCreate, (message) => {
   recent.set(key, entries);
   const repeats = entries.filter((entry) => entry.content && entry.content === message.content).length;
   if (repeats >= 4) logger.warn(`Possible spam detected: guild=${message.guild.id} user=${message.author.id}`);
-  // Foundation stage: log-only detection. Automated moderation is added in Stage 2.
+  // Anti-spam remains detection-only: no automatic deletion or punishment is performed.
 });
 
 client.on(Events.Error, (error) => logger.error("Discord client error.", error));
