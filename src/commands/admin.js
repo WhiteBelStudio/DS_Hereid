@@ -32,9 +32,22 @@ function hasGuildAdmin(interaction) {
     interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild)
   );
 }
+function staffRoleLevel(interaction) {
+  const roles = interaction.member?.roles?.cache
+    ? [...interaction.member.roles.cache.values()]
+    : [];
+  const names = roles.map((role) => String(role.name || "").trim().toUpperCase());
+  // These three roles intentionally have the same access level.
+  // CHIEF TECH ADMIN receives full access to every bot panel section.
+  if (names.includes("CHIEF TECH ADMIN")) return "full";
+  if (names.includes("ADMINISTRATOR") || names.includes("HEAD MODERATOR")) return "staff";
+  return null;
+}
 function allowed(interaction, section) {
   if (!interaction.guild || !interaction.member) return false;
   if (isOwner(interaction) || hasGuildAdmin(interaction)) return true;
+  const level = staffRoleLevel(interaction);
+  if (level === "full" || level === "staff") return true;
   const roleIds = interaction.member.roles?.cache
     ? [...interaction.member.roles.cache.keys()]
     : Array.isArray(interaction.member.roles) ? interaction.member.roles : [];
@@ -216,7 +229,7 @@ module.exports = {
       await interaction.reply({content:key==="roleId"?"Роль выбрана. Теперь выбери раздел доступа.":"Раздел выбран. Нажми «Выдать доступ» или «Снять доступ».",flags:MessageFlags.Ephemeral});return true;
     }
     if (id === "ha:roles:grant" || id === "ha:roles:revoke") {
-      if (!isOwner(interaction) && !hasGuildAdmin(interaction)) { await interaction.reply({content:"⛔ Только владелец бота или администратор сервера может менять права персонала.",flags:MessageFlags.Ephemeral});return true; }
+      if (!isOwner(interaction) && !hasGuildAdmin(interaction) && staffRoleLevel(interaction) !== "full") { await interaction.reply({content:"⛔ Только владелец, администратор сервера или CHIEF TECH ADMIN может менять права персонала.",flags:MessageFlags.Ephemeral});return true; }
       const state=interaction.client._adminSelections?.get(`${interaction.guildId}:${interaction.user.id}`);
       if (!state?.roleId || !state?.section) { await interaction.reply({content:"Сначала выбери роль и раздел доступа.",flags:MessageFlags.Ephemeral});return true; }
       if(id.endsWith("grant")) {
