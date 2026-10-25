@@ -1,10 +1,10 @@
 const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
 const { getProfile, levelForXp } = require("../member-profile");
 module.exports = {
-  data: new SlashCommandBuilder().setName("profile").setDescription("Посмотреть профиль и прогресс участника.").addUserOption((option) => option.setName("участник").setDescription("Чей профиль посмотреть").setRequired(false)),
+  data: new SlashCommandBuilder().setName("profile").setDescription("Посмотреть профиль и прогресс участника.").addUserOption((option) => option.setName("member").setDescription("Чей профиль посмотреть").setRequired(false)),
   async execute(interaction) {
     if (!interaction.inGuild()) return interaction.reply({ content: "Профили доступны только на сервере.", ephemeral: true });
-    const user = interaction.options.getUser("участник") || interaction.user;
+    const user = interaction.options.getUser("member") || interaction.user;
     const member = await interaction.guild.members.fetch(user.id).catch(() => null);
     const profile = getProfile(interaction.guildId, user.id);
     const level = levelForXp(profile.xp), next = 100 * (level + 1) ** 2, base = 100 * level ** 2;
