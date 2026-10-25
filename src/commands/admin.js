@@ -437,9 +437,10 @@ module.exports = {
       if(!allowed(interaction,"users")){await interaction.reply({content:"⛔ Нет доступа.",flags:MessageFlags.Ephemeral});return true;}
       const target=id.split(":").at(-1), amount=Number(interaction.fields.getTextInputValue("amount"));
       if(!validId(target)||!Number.isSafeInteger(amount)||amount===0||Math.abs(amount)>1000000){await interaction.reply({content:"Укажи целое изменение XP от -1 000 000 до 1 000 000, кроме нуля.",flags:MessageFlags.Ephemeral});return true;}
-      db.prepare("INSERT INTO member_stats(guild_id,user_id,xp,level) VALUES(?,?,MAX(0,?),0) ON CONFLICT(guild_id,user_id) DO UPDATE SET xp=MAX(0,member_stats.xp+?)").run(interaction.guildId,target,amount,amount);
-      audit(interaction.guildId,interaction.user.id,"xp_changed",target,String(amount));
-      await interaction.reply({content:`✅ XP обновлён. Изменение: ${amount>0?"+":""}${amount}.`,flags:MessageFlags.Ephemeral});return true;
+      const { changeXp } = require("../member-profile");
+      const updated = changeXp(interaction.guildId, target, amount);
+      audit(interaction.guildId,interaction.user.id,"xp_changed",target,`${amount}; итог: ${updated.xp}; уровень: ${updated.level}`);
+      await interaction.reply({content:`✅ XP обновлён. Изменение: ${amount>0?"+":""}${amount}. Теперь: ${updated.xp} XP, уровень ${updated.level}.`,flags:MessageFlags.Ephemeral});return true;
     }
     if (interaction.isModalSubmit() && id === "ha:modal:mod") {
       if(!allowed(interaction,"moderation")){await interaction.reply({content:"⛔ Нет доступа.",flags:MessageFlags.Ephemeral});return true;}
