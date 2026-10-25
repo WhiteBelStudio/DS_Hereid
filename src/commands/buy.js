@@ -16,7 +16,7 @@ module.exports = {
     };
     const embed = new EmbedBuilder().setColor(result.ok ? 0x1ABC9C : 0xE74C3C)
       .setTitle(result.ok ? "✅ Покупка успешна" : "❌ Не удалось купить")
-      .setDescription(result.ok ? `Куплено: **${result.item.name}** за **${result.item.price}** монет.\nОстаток: **${result.balance.toLocaleString("ru-RU")}** монет.\n\nДля применения используй \\`/equip item_id:${result.item.id}\\`.` : `${messages[result.reason] || "Покупка не выполнена."}${result.balance !== undefined ? `\nБаланс: **${result.balance.toLocaleString("ru-RU")}** монет.` : ""}`);
+      .setDescription(result.ok ? `Куплено: **${result.item.name}** за **${result.item.price}** монет.\nОстаток: **${result.balance.toLocaleString("ru-RU")}** монет.\n\nДля применения используй команду /equip с ID этого предмета.item.id}\\`.` : `${messages[result.reason] || "Покупка не выполнена."}${result.balance !== undefined ? `\nБаланс: **${result.balance.toLocaleString("ru-RU")}** монет.` : ""}`);
     await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
   },
 };
