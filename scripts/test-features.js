@@ -94,7 +94,8 @@ async function main() {
     const ctx = panelInteraction("ha:features");
     assert.equal(await admin.handle(ctx), true);
     assert.ok(ctx.lastUpdate.embeds[0].data.fields.length === 5);
-    assert.ok(ctx.lastUpdate.components.some((row) => row.components.some((button) => button.data.custom_id === "ha:feature:toggle:moderation")));
+    assert.ok(ctx.lastUpdate.components.some((row) => row.components.some((button) => button.data.custom_id === "ha:feature:toggle:moderation" && button.data.disabled === false)));
+    assert.ok(ctx.lastUpdate.components.every((row) => row.components.every((button) => button.data.disabled === false)));
   });
   await test("disabled moderation blocks panel entry", async () => {
     setFeatureEnabled(guildId, "moderation", false, actorId);
