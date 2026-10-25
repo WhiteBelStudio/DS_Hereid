@@ -11,7 +11,7 @@ process.env.GUILD_ID = "12345678901234568";
 process.env.LOG_LEVEL = "error";
 
 const db = require("../src/database");
-const { RANKS, snapshot, rankIndexFor } = require("../src/rank-system");
+const { RANKS, snapshot, rankIndexFor, recordMessage, recordVoiceState } = require("../src/rank-system");
 const DAY = 86_400_000;
 const HOUR = 3_600; // rank-system stores voice duration in seconds
 let passed = 0;
@@ -48,6 +48,36 @@ try {
     assert.equal(rankIndexFor(row, now), 7);
     assert.equal(rankIndexFor({ ...row, voice_seconds: 60 * HOUR - 1 }, now), 6);
     assert.equal(snapshot({ ...row, joined_at: now }, now).days, 0);
+  });
+
+  test("an active day is counted only after five valid messages", () => {
+    const member = { guild: { id: process.env.GUILD_ID }, id: "12345678901234570", user: { bot: false }, joinedTimestamp: Date.now() - 10 * DAY };
+    const base = Date.now();
+    for (let i = 0; i < 4; i++) recordMessage(member, "A valid message", base + i);
+    let row = db.prepare("SELECT message_count,active_days FROM member_rank_activity WHERE guild_id=? AND user_id=?").get(process.env.GUILD_ID, member.id);
+    assert.equal(row.message_count, 4);
+    assert.equal(row.active_days, 0);
+    recordMessage(member, "A fifth valid message", base + 5);
+    row = db.prepare("SELECT message_count,active_days FROM member_rank_activity WHERE guild_id=? AND user_id=?").get(process.env.GUILD_ID, member.id);
+    assert.equal(row.message_count, 5);
+    assert.equal(row.active_days, 1);
+    recordMessage(member, "Another valid message", base + 6);
+    row = db.prepare("SELECT active_days FROM member_rank_activity WHERE guild_id=? AND user_id=?").get(process.env.GUILD_ID, member.id);
+    assert.equal(row.active_days, 1);
+  });
+
+  test("AFK voice time is excluded while normal voice time is counted", () => {
+    const member = { guild: { id: process.env.GUILD_ID }, id: "12345678901234571", user: { bot: false }, joinedTimestamp: Date.now() - 10 * DAY };
+    const start = Date.now();
+    recordVoiceState(member, false, true, start, { wasAfk: false, isAfk: false });
+    recordVoiceState(member, true, false, start + 3600 * 1000, { wasAfk: false, isAfk: false });
+    let row = db.prepare("SELECT voice_seconds FROM member_rank_activity WHERE guild_id=? AND user_id=?").get(process.env.GUILD_ID, member.id);
+    assert.equal(row.voice_seconds, 3600);
+    recordVoiceState(member, false, true, start + 7200 * 1000, { wasAfk: false, isAfk: true });
+    recordVoiceState(member, true, false, start + 10800 * 1000, { wasAfk: true, isAfk: false });
+    row = db.prepare("SELECT voice_seconds,voice_started_at FROM member_rank_activity WHERE guild_id=? AND user_id=?").get(process.env.GUILD_ID, member.id);
+    assert.equal(row.voice_seconds, 3600);
+    assert.equal(row.voice_started_at, null);
   });
 
   test("rank activity schema does not alter existing member balance", () => {
