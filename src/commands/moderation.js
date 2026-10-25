@@ -154,7 +154,7 @@ async function applyAction(interaction, action, target, reason, durationMinutes 
     const dmSent = await notifyPunishedUser(interaction, action, target, reason, durationMinutes);
     const durationText = durationMinutes ? `\nДлительность: ${durationMinutes} мин.` : "";
     return interaction.reply({
-      content: `✅ ${ACTION_LABELS[action]} применено.\nЦель: <@${target.id}>\nПричина: ${reason}${durationText}\nНомер случая: #${caseId}${dmSent ? "\\n📩 Уведомление отправлено пользователю в личные сообщения." : "\\n⚠️ Не удалось отправить уведомление в личные сообщения (возможно, они закрыты)."}`,
+      content: `✅ ${ACTION_LABELS[action]} применено.\nЦель: <@${target.id}>\nПричина: ${reason}${durationText}\nНомер случая: #${caseId}${dmSent ? "\n📩 Уведомление отправлено пользователю в личные сообщения." : "\n⚠️ Не удалось отправить уведомление в личные сообщения (возможно, они закрыты)."}`,
       flags: MessageFlags.Ephemeral,
       allowedMentions: { parse: [] },
     });
