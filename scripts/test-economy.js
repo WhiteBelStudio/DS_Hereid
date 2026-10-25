@@ -19,20 +19,20 @@ try {
     const first = economy.claimDaily(guild, user, 1_000_000);
     assert.equal(first.claimed, true);
     assert.equal(first.reward, economy.DAILY_REWARD);
-    assert.equal(first.balance, 100);
+    assert.equal(first.balance, economy.DAILY_REWARD);
     const second = economy.claimDaily(guild, user, 1_000_000 + economy.DAILY_COOLDOWN_MS - 1);
     assert.equal(second.claimed, false);
-    assert.equal(second.balance, 100);
+    assert.equal(second.balance, economy.DAILY_REWARD);
     assert.equal(second.remainingMs, 1);
     const third = economy.claimDaily(guild, user, 1_000_000 + economy.DAILY_COOLDOWN_MS);
     assert.equal(third.claimed, true);
-    assert.equal(third.balance, 200);
+    assert.equal(third.balance, economy.DAILY_REWARD * 2);
   });
   test("purchase rejects insufficient funds without changing balance", () => {
     const result = economy.buyItem(guild, user, "title_legend", 3_000_000);
     assert.equal(result.ok, false);
     assert.equal(result.reason, "insufficient_funds");
-    assert.equal(economy.getBalance(guild, user).balance, 200);
+    assert.equal(economy.getBalance(guild, user).balance, economy.DAILY_REWARD * 2);
   });
   test("purchase atomically debits balance and adds inventory", () => {
     economy.adjustBalance(guild, user, "12345678901234570", 4000, "test funds", 4_000_000);
