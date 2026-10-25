@@ -16,6 +16,7 @@ const client = new Client({
     GatewayIntentBits.GuildMembers,
     GatewayIntentBits.GuildModeration,
     GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.GuildVoiceStates,
     GatewayIntentBits.MessageContent,
   ],
   partials: [Partials.Channel, Partials.Message, Partials.GuildMember, Partials.User],
@@ -236,7 +237,10 @@ client.on(Events.VoiceStateUpdate, async (oldState, newState) => {
     const wasInVoice = Boolean(oldState.channelId);
     const isInVoice = Boolean(newState.channelId);
     if (wasInVoice === isInVoice && oldState.channelId === newState.channelId) return;
-    recordVoiceState(member, wasInVoice, isInVoice);
+    const afkChannelId = member.guild.afkChannelId;
+    const wasAfk = Boolean(afkChannelId && oldState.channelId === afkChannelId);
+    const isAfk = Boolean(afkChannelId && newState.channelId === afkChannelId);
+    recordVoiceState(member, wasInVoice, isInVoice, Date.now(), { wasAfk, isAfk });
     await evaluateMember(member);
   } catch (error) {
     logger.warn("Voice activity tracking failed.", error);
