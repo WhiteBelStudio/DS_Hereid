@@ -32,7 +32,7 @@ function setFeatureEnabled(guildId, key, enabled, actorId) {
     throw new Error(`Unknown feature: ${key}`);
   }
   if (typeof enabled !== "boolean") throw new TypeError("enabled must be a boolean");
-  if (!/^\\d{17,20}$/.test(String(guildId)) || !/^\\d{17,20}$/.test(String(actorId))) {
+  if (!/^\d{17,20}$/.test(String(guildId)) || !/^\d{17,20}$/.test(String(actorId))) {
     throw new Error("Invalid Discord guild or actor ID");
   }
   setStatement.run(guildId, key, enabled ? 1 : 0, actorId);
