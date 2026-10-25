@@ -6,6 +6,7 @@ const {
 const config = require("./config");
 const logger = require("./logger");
 const db = require("./database");
+const { isFeatureEnabled } = require("./features");
 
 const client = new Client({
   intents: [
@@ -138,7 +139,7 @@ client.on(Events.GuildMemberAdd, async (member) => {
       "SELECT welcome_channel_id, welcome_message, autorole_id FROM guild_settings WHERE guild_id = ?",
     ).get(member.guild.id);
 
-    if (settings?.autorole_id) {
+    if (settings?.autorole_id && isFeatureEnabled(member.guild.id, "autorole")) {
       const role = await member.guild.roles.fetch(settings.autorole_id).catch(() => null);
       if (role && role.editable) {
         await member.roles.add(role, "Configured automatic member role");
@@ -147,7 +148,7 @@ client.on(Events.GuildMemberAdd, async (member) => {
       }
     }
 
-    if (settings?.welcome_channel_id) {
+    if (settings?.welcome_channel_id && isFeatureEnabled(member.guild.id, "welcome_messages")) {
       const channel = await member.guild.channels.fetch(settings.welcome_channel_id).catch(() => null);
       if (channel?.isTextBased()) {
         const message = (settings.welcome_message || "Добро пожаловать, {user}, на сервер **{server}**!")
@@ -169,7 +170,7 @@ client.on(Events.GuildMemberRemove, async (member) => {
     const settings = db.prepare(
       "SELECT goodbye_channel_id, goodbye_message FROM guild_settings WHERE guild_id = ?",
     ).get(member.guild.id);
-    if (!settings?.goodbye_channel_id) return;
+    if (!settings?.goodbye_channel_id || !isFeatureEnabled(member.guild.id, "goodbye_messages")) return;
 
     const channel = await member.guild.channels.fetch(settings.goodbye_channel_id).catch(() => null);
     if (!channel?.isTextBased()) return;
@@ -190,6 +191,7 @@ client.on(Events.MessageCreate, async (message) => {
   if (!message.guild || message.author.bot) return;
 
   // RP actions are not handled here; messages are checked only for repeated spam.
+  if (!isFeatureEnabled(message.guild.id, "spam_detection")) return;
   const now = Date.now();
   const key = `${message.guild.id}:${message.author.id}`;
   const recent = client._recentMessages || (client._recentMessages = new Map());
