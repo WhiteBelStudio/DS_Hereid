@@ -1,6 +1,6 @@
 const db = require("./database");
 
-const DAILY_REWARD = 100;
+const DAILY_REWARD = 15;
 const DAILY_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 const CATALOG = Object.freeze([
   // Титулы
