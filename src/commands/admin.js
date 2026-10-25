@@ -102,7 +102,7 @@ function idModal(customId, title, label = "Discord ID участника", place
 function validId(id) { return /^\d{17,20}$/.test(id); }
 
 module.exports = {
-  data: new SlashCommandBuilder().setName("admin").setDescription("Открыть административную панель HeradeLegend."),
+  data: new SlashCommandBuilder().setName("admin").setDescription("Открыть административную панель HeradeLegend.").setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
   async execute(interaction) {
     if (!interaction.inGuild()) return interaction.reply({ content: "Панель доступна только на сервере.", flags: MessageFlags.Ephemeral });
     if (!isOwner(interaction) && !hasGuildAdmin(interaction) && !Object.keys(SECTIONS).some((section) => allowed(interaction, section))) {
