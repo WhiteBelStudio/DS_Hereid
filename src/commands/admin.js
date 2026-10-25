@@ -174,7 +174,7 @@ module.exports = {
       }
       return true;
     }
-    // Only the eight top-level section buttons are checked here. Previously
+    // Only the seven top-level section buttons are checked here. Previously
     // this caught every "ha:*" button, including nested actions such as
     // ha:user:lookup and ha:mod:prepare, and rejected them as unknown sections
     // before their own handlers could run.
