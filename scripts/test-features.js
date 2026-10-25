@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
-const { PermissionFlagsBits } = require("discord.js");
+const Database = require("better-sqlite3");
 
 const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "herade-features-test-"));
 process.env.DATABASE_PATH = path.join(tempDir, "features.sqlite");
@@ -90,7 +90,28 @@ async function main() {
     assert.equal(isFeatureEnabled(guildId, "goodbye_messages"), true);
     assert.match(ctx.lastReply.content, /Нет доступа/);
   });
+  await test("feature panel lists all switches", async () => {
+    const ctx = panelInteraction("ha:features");
+    assert.equal(await admin.handle(ctx), true);
+    assert.ok(ctx.lastUpdate.embeds[0].data.fields.length === 5);
+    assert.ok(ctx.lastUpdate.components.some((row) => row.components.some((button) => button.data.custom_id === "ha:feature:toggle:moderation")));
+  });
+  await test("disabled moderation blocks panel entry", async () => {
+    setFeatureEnabled(guildId, "moderation", false, actorId);
+    const ctx = panelInteraction("ha:moderation");
+    ctx.isButton = () => true;
+    assert.equal(await admin.handle(ctx), true);
+    assert.match(ctx.lastReply.content, /модерации отключена/i);
+    setFeatureEnabled(guildId, "moderation", true, actorId);
+  });
+  const dbPath = process.env.DATABASE_PATH;
   db.close();
+  const reopened = new Database(dbPath);
+  assert.equal(reopened.prepare("SELECT enabled FROM guild_features WHERE guild_id=? AND feature_key=?").get(guildId, "welcome_messages").enabled, 0);
+  assert.equal(reopened.prepare("SELECT enabled FROM guild_features WHERE guild_id=? AND feature_key=?").get(guildId, "moderation").enabled, 1);
+  reopened.close();
+  console.log("[ OK ] feature states survive database close and reopen");
+  passed += 1;
   fs.rmSync(tempDir, { recursive: true, force: true });
   console.log(`[test-features] Passed: ${passed}`);
 }
