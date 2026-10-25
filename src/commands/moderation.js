@@ -42,10 +42,10 @@ function hasPermission(interaction, permission) {
     interaction.memberPermissions?.has(permission) || isTrustedStaff(interaction));
 }
 
-function recordCase(guildId, targetId, moderatorId, action, reason) {
+function recordCase(guildId, targetId, moderatorId, action, reason, durationMinutes = null) {
   const result = db.prepare(
-    "INSERT INTO moderation_cases (guild_id,target_id,moderator_id,action,reason) VALUES (?,?,?,?,?)",
-  ).run(guildId, targetId, moderatorId, action, reason);
+    "INSERT INTO moderation_cases (guild_id,target_id,moderator_id,action,reason,duration_minutes) VALUES (?,?,?,?,?,?)",
+  ).run(guildId, targetId, moderatorId, action, reason, durationMinutes);
   db.prepare(
     "INSERT INTO admin_audit (guild_id,actor_id,action,target_id,details) VALUES (?,?,?,?,?)",
   ).run(guildId, moderatorId, `moderation_${action}`, targetId, reason.slice(0, 900));
@@ -119,7 +119,7 @@ async function applyAction(interaction, action, target, reason, durationMinutes 
       return interaction.reply({ content: "Неизвестный тип наказания.", flags: MessageFlags.Ephemeral });
     }
 
-    const caseId = recordCase(interaction.guildId, target.id, interaction.user.id, action, reason);
+    const caseId = recordCase(interaction.guildId, target.id, interaction.user.id, action, reason, durationMinutes);
     await sendModLog(interaction, action, target, reason, durationMinutes, caseId);
     const durationText = durationMinutes ? `\nДлительность: ${durationMinutes} мин.` : "";
     return interaction.reply({
@@ -171,10 +171,10 @@ module.exports = {
       }
       const target = interaction.options.getUser("member");
       const rows = target
-        ? db.prepare("SELECT id,target_id,moderator_id,action,reason,created_at FROM moderation_cases WHERE guild_id=? AND target_id=? ORDER BY id DESC LIMIT 10").all(interaction.guildId, target.id)
-        : db.prepare("SELECT id,target_id,moderator_id,action,reason,created_at FROM moderation_cases WHERE guild_id=? ORDER BY id DESC LIMIT 10").all(interaction.guildId);
+        ? db.prepare("SELECT id,target_id,moderator_id,action,reason,created_at,duration_minutes FROM moderation_cases WHERE guild_id=? AND target_id=? ORDER BY id DESC LIMIT 10").all(interaction.guildId, target.id)
+        : db.prepare("SELECT id,target_id,moderator_id,action,reason,created_at,duration_minutes FROM moderation_cases WHERE guild_id=? ORDER BY id DESC LIMIT 10").all(interaction.guildId);
       const embed = new EmbedBuilder().setColor(0x5865f2).setTitle("🛡️ История наказаний")
-        .setDescription(rows.length ? rows.map((r) => `**#${r.id} · ${ACTION_LABELS[r.action] || r.action}** — <@${r.target_id}>\nМодератор: <@${r.moderator_id}> · ${r.reason || "Причина не указана"}\n<t:${Math.floor(new Date(r.created_at).getTime() / 1000)}:R>`).join("\n\n").slice(0, 4000) : "Записей пока нет.");
+        .setDescription(rows.length ? rows.map((r) => `**#${r.id} · ${ACTION_LABELS[r.action] || r.action}** — <@${r.target_id}>\nМодератор: <@${r.moderator_id}> · ${r.reason || "Причина не указана"}${r.duration_minutes ? ` · ${r.duration_minutes} мин.` : ""}\n<t:${Math.floor(new Date(r.created_at).getTime() / 1000)}:R>`).join("\n\n").slice(0, 4000) : "Записей пока нет.");
       return interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral, allowedMentions: { parse: [] } });
     }
 
