@@ -65,7 +65,7 @@ async function main() {
   });
   await test("unknown feature and invalid IDs are rejected", async () => {
     assert.throws(() => isFeatureEnabled(guildId, "unknown"), /Unknown feature/);
-    assert.throws(() => setFeatureEnabled(guildId, "moderation", false, actorId), /Invalid Discord/);
+    assert.throws(() => setFeatureEnabled("not-a-guild-id", "moderation", false, actorId), /Invalid Discord/);
     assert.throws(() => setFeatureEnabled(guildId, "moderation", 0, actorId), /boolean/);
   });
   await test("feature listing returns state for every supported feature", async () => {
