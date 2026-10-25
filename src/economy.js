@@ -3,16 +3,47 @@ const db = require("./database");
 const DAILY_REWARD = 100;
 const DAILY_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 const CATALOG = Object.freeze([
+  // Титулы
   { id: "title_newcomer", name: "Титул «Новичок»", category: "Титулы", description: "Небольшой титул для профиля.", price: 150, type: "title", value: "Новичок" },
+  { id: "title_friend", name: "Титул «Свой человек»", category: "Титулы", description: "Для тех, кто уже освоился на сервере.", price: 300, type: "title", value: "Свой человек" },
+  { id: "title_regular", name: "Титул «Постоянный»", category: "Титулы", description: "Покажи, что ты часть сообщества.", price: 450, type: "title", value: "Постоянный" },
   { id: "title_veteran", name: "Титул «Ветеран»", category: "Титулы", description: "Титул для коллекции профиля.", price: 650, type: "title", value: "Ветеран" },
+  { id: "title_creator", name: "Титул «Создатель»", category: "Титулы", description: "Для участников с творческим подходом.", price: 850, type: "title", value: "Создатель" },
+  { id: "title_elite", name: "Титул «Элита»", category: "Титулы", description: "Статусный титул для профиля.", price: 1200, type: "title", value: "Элита" },
   { id: "title_legend", name: "Титул «Легенда»", category: "Титулы", description: "Редкий косметический титул.", price: 1500, type: "title", value: "Легенда" },
+  { id: "title_mythic", name: "Титул «Мифический»", category: "Титулы", description: "Один из самых дорогих титулов магазина.", price: 2500, type: "title", value: "Мифический" },
+
+  // Значки
   { id: "badge_star", name: "Значок «Звезда»", category: "Значки", description: "Значок рядом с оформлением профиля.", price: 300, type: "badge", value: "⭐" },
   { id: "badge_spark", name: "Значок «Искра»", category: "Значки", description: "Яркий значок для профиля.", price: 450, type: "badge", value: "✨" },
+  { id: "badge_fire", name: "Значок «Огонь»", category: "Значки", description: "Для активного участника.", price: 500, type: "badge", value: "🔥" },
+  { id: "badge_crown", name: "Значок «Корона»", category: "Значки", description: "Королевский акцент в профиле.", price: 800, type: "badge", value: "👑" },
+  { id: "badge_diamond", name: "Значок «Алмаз»", category: "Значки", description: "Редкий блестящий значок.", price: 1000, type: "badge", value: "💎" },
+  { id: "badge_moon", name: "Значок «Луна»", category: "Значки", description: "Спокойный ночной стиль.", price: 550, type: "badge", value: "🌙" },
+  { id: "badge_comet", name: "Значок «Комета»", category: "Значки", description: "Космический значок для профиля.", price: 750, type: "badge", value: "☄️" },
+  { id: "badge_heart", name: "Значок «Сердце»", category: "Значки", description: "Небольшая деталь оформления.", price: 350, type: "badge", value: "💜" },
+
+  // Рамки
   { id: "frame_ocean", name: "Рамка «Океан»", category: "Рамки", description: "Косметическая рамка профиля.", price: 500, type: "frame", value: "Океан" },
+  { id: "frame_forest", name: "Рамка «Лес»", category: "Рамки", description: "Зелёный природный стиль.", price: 650, type: "frame", value: "Лес" },
+  { id: "frame_sunset", name: "Рамка «Закат»", category: "Рамки", description: "Тёплые оттенки заката.", price: 750, type: "frame", value: "Закат" },
   { id: "frame_neon", name: "Рамка «Неон»", category: "Рамки", description: "Неоновая рамка профиля.", price: 900, type: "frame", value: "Неон" },
+  { id: "frame_galaxy", name: "Рамка «Галактика»", category: "Рамки", description: "Космический стиль для профиля.", price: 1400, type: "frame", value: "Галактика" },
+  { id: "frame_gold", name: "Рамка «Золото»", category: "Рамки", description: "Премиальная золотая рамка.", price: 1800, type: "frame", value: "Золото" },
+  { id: "frame_ice", name: "Рамка «Лёд»", category: "Рамки", description: "Холодный ледяной стиль.", price: 1100, type: "frame", value: "Лёд" },
+  { id: "frame_shadow", name: "Рамка «Тень»", category: "Рамки", description: "Тёмное минималистичное оформление.", price: 1250, type: "frame", value: "Тень" },
+
+  // Цвета профиля
   { id: "color_blue", name: "Цвет «Синий»", category: "Цвета", description: "Синий цвет карточки профиля.", price: 250, type: "color", value: "5865F2" },
   { id: "color_purple", name: "Цвет «Фиолетовый»", category: "Цвета", description: "Фиолетовый цвет карточки профиля.", price: 400, type: "color", value: "9B59B6" },
   { id: "color_teal", name: "Цвет «Бирюзовый»", category: "Цвета", description: "Бирюзовый цвет карточки профиля.", price: 550, type: "color", value: "1ABC9C" },
+  { id: "color_red", name: "Цвет «Рубиновый»", category: "Цвета", description: "Насыщенный красный оттенок.", price: 450, type: "color", value: "E74C3C" },
+  { id: "color_green", name: "Цвет «Изумрудный»", category: "Цвета", description: "Глубокий зелёный оттенок.", price: 450, type: "color", value: "2ECC71" },
+  { id: "color_orange", name: "Цвет «Оранжевый»", category: "Цвета", description: "Яркий тёплый оттенок.", price: 350, type: "color", value: "E67E22" },
+  { id: "color_gold", name: "Цвет «Золотой»", category: "Цвета", description: "Золотой цвет карточки профиля.", price: 800, type: "color", value: "F1C40F" },
+  { id: "color_pink", name: "Цвет «Розовый»", category: "Цвета", description: "Мягкий розовый оттенок.", price: 400, type: "color", value: "FF69B4" },
+  { id: "color_silver", name: "Цвет «Серебряный»", category: "Цвета", description: "Сдержанный серебристый оттенок.", price: 700, type: "color", value: "BDC3C7" },
+  { id: "color_crimson", name: "Цвет «Багровый»", category: "Цвета", description: "Глубокий багровый оттенок.", price: 650, type: "color", value: "8E244D" },
 ]);
 
 db.exec(`
@@ -74,10 +105,10 @@ function buyItem(guildId, userId, itemId, now = Date.now()) {
   const item = itemById.get(itemId);
   if (!item) return { ok: false, reason: "unknown_item" };
   const run = db.transaction(() => {
-    ensureMember.run(guildId, userId);
     if (db.prepare("SELECT 1 FROM economy_inventory WHERE guild_id=? AND user_id=? AND item_id=?").get(guildId,userId,itemId)) {
       return { ok: false, reason: "already_owned", item, balance: getBalance(guildId,userId).balance };
     }
+    ensureMember.run(guildId, userId);
     const debit = db.prepare("UPDATE member_stats SET balance=balance-? WHERE guild_id=? AND user_id=? AND balance>=?")
       .run(item.price, guildId, userId, item.price);
     if (debit.changes !== 1) return { ok: false, reason: "insufficient_funds", item, balance: getBalance(guildId,userId).balance };
