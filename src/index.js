@@ -7,6 +7,7 @@ const config = require("./config");
 const logger = require("./logger");
 const db = require("./database");
 const { isFeatureEnabled } = require("./features");
+const { addMessageXp } = require("./member-profile");
 
 const client = new Client({
   intents: [
@@ -188,7 +189,12 @@ client.on(Events.GuildMemberRemove, async (member) => {
 });
 
 client.on(Events.MessageCreate, async (message) => {
-  if (!message.guild || message.author.bot) return;
+  if (!message.guild || message.author.bot || !message.content.trim()) return;
+
+  try {
+    const result = addMessageXp(message.guild.id, message.author.id);
+    if (result.awarded && result.level > result.previousLevel) logger.info(`Member leveled up: guild=${message.guild.id} user=${message.author.id} level=${result.level}`);
+  } catch (error) { logger.error("Member activity XP could not be saved.", error); }
 
   // RP actions are not handled here; messages are checked only for repeated spam.
   if (!isFeatureEnabled(message.guild.id, "spam_detection")) return;
