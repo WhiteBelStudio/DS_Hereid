@@ -29,6 +29,14 @@ db.exec(`
   );
   CREATE INDEX IF NOT EXISTS idx_rank_activity_leaderboard
     ON member_rank_activity(guild_id, message_count DESC, active_days DESC);
+  CREATE TABLE IF NOT EXISTS member_rank_daily_messages (
+    guild_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    activity_date TEXT NOT NULL,
+    message_count INTEGER NOT NULL DEFAULT 0,
+    counted_active_day INTEGER NOT NULL DEFAULT 0 CHECK (counted_active_day IN (0, 1)),
+    PRIMARY KEY (guild_id, user_id, activity_date)
+  );
 `);
 
 const getRow = db.prepare("SELECT * FROM member_rank_activity WHERE guild_id=? AND user_id=?");
