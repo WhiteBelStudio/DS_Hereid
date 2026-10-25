@@ -60,6 +60,14 @@ db.exec(`
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (guild_id, role_id, section)
   );
+  CREATE TABLE IF NOT EXISTS guild_features (
+    guild_id TEXT NOT NULL,
+    feature_key TEXT NOT NULL,
+    enabled INTEGER NOT NULL CHECK (enabled IN (0, 1)),
+    updated_by TEXT NOT NULL,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (guild_id, feature_key)
+  );
   CREATE TABLE IF NOT EXISTS admin_audit (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     guild_id TEXT NOT NULL,
