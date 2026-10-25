@@ -7,7 +7,7 @@ module.exports = {
       .addChoices(...CATALOG.map(item => ({ name: `${item.name} — ${item.price} монет`, value: item.id })))),
   async execute(interaction) {
     if (!interaction.inGuild()) return interaction.reply({ content: "Покупки доступны только на сервере.", flags: MessageFlags.Ephemeral });
-    if (economyDisabled(interaction)) return;
+    if (await economyDisabled(interaction)) return;
     const result = buyItem(interaction.guildId, interaction.user.id, interaction.options.getString("item_id"));
     const messages = {
       already_owned: "Этот предмет уже есть в твоём инвентаре.",
