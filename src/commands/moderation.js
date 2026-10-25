@@ -74,7 +74,36 @@ async function sendModLog(interaction, action, target, reason, durationMinutes =
   }).catch((error) => interaction.client.logger?.warn?.("Could not send moderation log.", error));
 }
 
-async function applyAction(interaction, action, target, reason, durationMinutes = null) {
+
+async function notifyPunishedUser(interaction, action, target, reason, durationMinutes = null) {
+  const now = Date.now();
+  const expiry = action === "timeout" && durationMinutes
+    ? Math.floor((now + durationMinutes * 60_000) / 1000)
+    : null;
+  const endText = action === "timeout"
+    ? `Тайм-аут закончится: <t:${expiry}:F> ( <t:${expiry}:R> ).`
+    : action === "warn"
+      ? "Срок предупреждения не установлен. Оно останется в истории модерации, пока персонал не решит иначе."
+      : action === "kick"
+        ? "Кик не имеет таймера: ты сможешь вернуться, если сервер разрешает повторный вход и у тебя есть приглашение."
+        : "Бан действует без установленного срока и закончится только после разбана администрацией.";
+  const message = [
+    `🛡️ **Ты получил наказание на сервере «${interaction.guild.name}».**`,
+    `**Наказание:** ${ACTION_LABELS[action] || action}`,
+    `**Причина:** ${reason}`,
+    action === "timeout" ? `**Длительность:** ${durationMinutes} мин.` : "",
+    endText,
+    `**Модератор:** ${interaction.user.tag}`,
+  ].filter(Boolean).join("\\n");
+  try {
+    await target.send({ content: message, allowedMentions: { parse: [] } });
+    return true;
+  } catch (error) {
+    interaction.client.logger?.warn?.(`Could not DM punished user ${target.id}; their DMs may be closed.`);
+    return false;
+  }
+}
+\nasync function applyAction(interaction, action, target, reason, durationMinutes = null) {
   if (!target) {
     return interaction.reply({ content: "⛔ Не удалось определить цель наказания.", flags: MessageFlags.Ephemeral });
   }
