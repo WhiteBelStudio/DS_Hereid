@@ -87,8 +87,8 @@ function mainRows() {
 }
 function backRow() {
   return new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId("ha:home").setLabel("Главная панель").setEmoji("🏠").setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId("ha:refresh").setLabel("Обновить").setEmoji("🔄").setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId("ha:home").setLabel("Главная панель").setEmoji("🏠").setStyle(ButtonStyle.Secondary).setDisabled(false),
+    new ButtonBuilder().setCustomId("ha:refresh").setLabel("Обновить").setEmoji("🔄").setStyle(ButtonStyle.Secondary).setDisabled(false),
   );
 }
 function idModal(customId, title, label = "Discord ID участника", placeholder = "Например: 123456789012345678") {
@@ -158,19 +158,20 @@ module.exports = {
       const buttons = current.map((feature) => new ButtonBuilder()
         .setCustomId(`ha:feature:toggle:${feature.key}`)
         .setLabel(feature.enabled ? `Отключить: ${feature.label}` : `Включить: ${feature.label}`)
-        .setStyle(feature.enabled ? ButtonStyle.Danger : ButtonStyle.Success));
+        .setStyle(feature.enabled ? ButtonStyle.Danger : ButtonStyle.Success)
+        .setDisabled(false));
       const rows = [];
       for (let i = 0; i < buttons.length; i += 5) {
         rows.push(new ActionRowBuilder().addComponents(buttons.slice(i, i + 5)));
       }
       rows.push(backRow());
-      const payload = { embeds: [embed], components: rows, flags: MessageFlags.Ephemeral };
-      if (interaction.isButton() && (id === "ha:features" || id.startsWith("ha:feature:toggle:"))) {
-        if (interaction.replied || interaction.deferred) await interaction.followUp(payload);
-        else if (typeof interaction.update === "function") await interaction.update(payload);
-        else await interaction.reply(payload);
+      const payload = { embeds: [embed], components: rows };
+      // These controls live inside the original ephemeral admin message.
+      // Update that message directly so the clicked panel remains interactive.
+      if (interaction.isButton()) {
+        await interaction.update(payload);
       } else {
-        await interaction.reply(payload);
+        await interaction.reply({ ...payload, flags: MessageFlags.Ephemeral });
       }
       return true;
     }
