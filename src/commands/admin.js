@@ -377,7 +377,6 @@ module.exports = {
       await interaction.showModal(modal);
       return true;
     }
-    }
     if ((id.startsWith("ha:mod:") || id.startsWith("ha:punish:") || id === "ha:modal:mod") && !isFeatureEnabled(interaction.guildId, "moderation")) {
       await interaction.reply({ content: "🛑 Панель модерации отключена владельцем или администратором сервера.", flags: MessageFlags.Ephemeral });
       return true;
