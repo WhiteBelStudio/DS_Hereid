@@ -39,7 +39,7 @@ const ensureRow = db.prepare(`
 `);
 
 function ensureMember(member, now = Date.now()) {
-  ensureRow.run(member.guild.id, member.id, member.joinedTimestamp || now, member.joinedTimestamp || now);
+  ensureRow.run(member.guild.id, member.id, member.joinedTimestamp || now, now);
   return getRow.get(member.guild.id, member.id);
 }
 
@@ -117,12 +117,12 @@ async function evaluateMember(member, now = Date.now()) {
   }
 
   const target = RANKS[targetIndex];
-  const role = member.guild.roles.cache.find((item) => item.name.trim().toUpperCase() === target.name);
+  const role = member.guild.roles.cache.find((item) => item.name.trim().toUpperCase().endsWith(target.name));
   if (!role) return { changed: false, error: "missing_role", rank: target.name };
   if (!role.editable) return { changed: false, error: "role_not_editable", rank: target.name };
 
   const rankRoles = member.guild.roles.cache.filter((item) =>
-    RANKS.some((rank) => rank.name === item.name.trim().toUpperCase()));
+    RANKS.some((rank) => item.name.trim().toUpperCase().endsWith(rank.name)));
   const oldRankRole = rankRoles.find((item) => member.roles.cache.has(item.id));
   if (oldRankRole?.id === role.id && row.current_rank === target.name) return { changed: false, rank: target.name };
 
