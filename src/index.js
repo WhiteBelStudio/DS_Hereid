@@ -8,6 +8,7 @@ const logger = require("./logger");
 const db = require("./database");
 const { isFeatureEnabled } = require("./features");
 const { addMessageXp } = require("./member-profile");
+const { ensureMember, recordMessage, recordVoiceState, evaluateMember, evaluateGuild } = require("./rank-system");
 
 const client = new Client({
   intents: [
@@ -66,6 +67,15 @@ const adminPanel = client.commands.get("admin");
 client.once(Events.ClientReady, async (readyClient) => {
   logger.info(`Logged in as ${readyClient.user.tag} (${readyClient.user.id})`);
   logger.info(`Connected to ${readyClient.guilds.cache.size} guild(s).`);
+
+  const rankGuild = await readyClient.guilds.fetch(config.guildId).catch(() => null);
+  if (rankGuild) {
+    await evaluateGuild(rankGuild, logger);
+    const rankSweep = setInterval(() => { void evaluateGuild(rankGuild, logger); }, 10 * 60_000);
+    rankSweep.unref?.();
+  } else {
+    logger.warn("Configured guild unavailable; automatic rank evaluation will start when the guild is reachable.");
+  }
 
   // Register guild commands on startup, so Pterodactyl does not require a
   // separate manual command-registration step after every code update.
@@ -136,6 +146,8 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
 client.on(Events.GuildMemberAdd, async (member) => {
   try {
+    ensureMember(member);
+    await evaluateMember(member);
     const settings = db.prepare(
       "SELECT welcome_channel_id, welcome_message, autorole_id FROM guild_settings WHERE guild_id = ?",
     ).get(member.guild.id);
@@ -193,6 +205,11 @@ client.on(Events.MessageCreate, async (message) => {
 
   try {
     const result = addMessageXp(message.guild.id, message.author.id, Date.now(), message.content);
+    const member = message.member || await message.guild.members.fetch(message.author.id).catch(() => null);
+    if (member) {
+      recordMessage(member, message.content);
+      await evaluateMember(member).catch((error) => logger.warn("Automatic rank evaluation failed.", error));
+    }
     if (result.awarded && result.level > result.previousLevel) logger.info(`Member leveled up: guild=${message.guild.id} user=${message.author.id} level=${result.level}`);
   } catch (error) { logger.error("Member activity XP could not be saved.", error); }
 
@@ -210,6 +227,20 @@ client.on(Events.MessageCreate, async (message) => {
     logger.warn(`Possible spam detected: guild=${message.guild.id} user=${message.author.id}`);
   }
   // Detection only: no automatic message deletion or punishment is performed.
+});
+
+client.on(Events.VoiceStateUpdate, async (oldState, newState) => {
+  try {
+    const member = newState.member || oldState.member;
+    if (!member || member.user.bot) return;
+    const wasInVoice = Boolean(oldState.channelId);
+    const isInVoice = Boolean(newState.channelId);
+    if (wasInVoice === isInVoice && oldState.channelId === newState.channelId) return;
+    recordVoiceState(member, wasInVoice, isInVoice);
+    await evaluateMember(member);
+  } catch (error) {
+    logger.warn("Voice activity tracking failed.", error);
+  }
 });
 
 client.on(Events.Error, (error) => logger.error("Discord client error.", error));
