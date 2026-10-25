@@ -6,7 +6,8 @@ Universal Discord community bot built with Node.js 22, discord.js 14 and SQLite 
 
 - Discord login, structured logging and graceful shutdown.
 - Slash commands: `/help`, `/ping`, `/botinfo`, `/admin`, `/serverconfig`.
-- Interactive ephemeral administration panel with sections for member lookup, XP management, moderation, staff-role access, server settings, statistics and audit.
+- Interactive ephemeral administration panel with sections for member lookup, XP management, moderation, staff-role access, server settings, feature controls, statistics and audit.
+- Persistent feature switches for welcome messages, goodbye messages, automatic roles, repeated-message spam detection and the moderation panel; each change is access-checked and audited.
 - Role-based access grants stored in SQLite; server Administrators and configured bot owners have full panel access.
 - Moderation actions: 10-minute timeout, kick and ban with required reason, hierarchy/permission checks, case history and optional mod-log channel.
 - Welcome/goodbye messages and automatic role assignment.
@@ -43,11 +44,12 @@ The panel includes:
 - Timeout (10 minutes), kick and ban; each requires a reason and checks the Discord role hierarchy.
 - Per-section staff-role access grants.
 - Current server configuration, summary statistics and audit log.
+- Feature switches: welcome messages, goodbye messages, automatic roles, spam detection and moderation. Existing installations keep current behavior by default; settings are stored per guild in SQLite and changes are recorded in the audit log.
 - Moderation case history and optional posting to the configured moderation-log channel.
 
 ## Data and safety notes
 
-- Existing SQLite files are preserved; tables are created with `CREATE TABLE IF NOT EXISTS`.
+- Existing SQLite files are preserved; tables are created with `CREATE TABLE IF NOT EXISTS`. Feature settings use a separate `guild_features` table and do not reset member statistics or other existing data.
 - The repository ignores `.env`, `node_modules/`, `data/`, and SQLite database files.
 - Never commit `.env` or share the bot token.
 - Ensure the bot role is above roles it must manage and has the necessary Discord permissions.
