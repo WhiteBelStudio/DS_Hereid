@@ -13,7 +13,7 @@ process.env.LOG_LEVEL = "error";
 const db = require("../src/database");
 const { RANKS, snapshot, rankIndexFor } = require("../src/rank-system");
 const DAY = 86_400_000;
-const HOUR = 3_600_000;
+const HOUR = 3_600; // rank-system stores voice duration in seconds
 let passed = 0;
 function test(name, fn) {
   fn();
