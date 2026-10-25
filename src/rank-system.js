@@ -46,29 +46,65 @@ function ensureMember(member, now = Date.now()) {
 function recordMessage(member, content, now = Date.now()) {
   if (!member?.guild || member.user?.bot || String(content || "").trim().length < 10) return;
   ensureMember(member, now);
+  const guildId = member.guild.id;
+  const userId = member.id;
   const date = new Date(now).toISOString().slice(0, 10);
-  db.prepare(`
-    UPDATE member_rank_activity
-    SET message_count=message_count+1,
-        active_days=active_days + CASE WHEN last_active_date IS NULL OR last_active_date<>? THEN 1 ELSE 0 END,
-        last_active_date=?,
-        last_activity_at=?
-    WHERE guild_id=? AND user_id=?
-  `).run(date, date, now, member.guild.id, member.id);
+  const transaction = db.transaction(() => {
+    db.prepare(`
+      INSERT INTO member_rank_daily_messages(guild_id,user_id,activity_date,message_count,counted_active_day)
+      VALUES(?,?,?,1,0)
+      ON CONFLICT(guild_id,user_id,activity_date)
+      DO UPDATE SET message_count=message_count+1
+    `).run(guildId, userId, date);
+    const daily = db.prepare(`
+      SELECT message_count,counted_active_day FROM member_rank_daily_messages
+      WHERE guild_id=? AND user_id=? AND activity_date=?
+    `).get(guildId, userId, date);
+    let activeDayIncrement = 0;
+    if (daily.message_count >= 5 && daily.counted_active_day === 0) {
+      db.prepare(`
+        UPDATE member_rank_daily_messages SET counted_active_day=1
+        WHERE guild_id=? AND user_id=? AND activity_date=?
+      `).run(guildId, userId, date);
+      activeDayIncrement = 1;
+    }
+    db.prepare(`
+      UPDATE member_rank_activity
+      SET message_count=message_count+1,
+          active_days=active_days+?,
+          last_active_date=CASE WHEN ?=1 THEN ? ELSE last_active_date END,
+          last_activity_at=?
+      WHERE guild_id=? AND user_id=?
+    `).run(activeDayIncrement, activeDayIncrement, date, now, guildId, userId);
+  });
+  transaction();
 }
 
-function recordVoiceState(member, wasInVoice, isInVoice, now = Date.now()) {
+function recordVoiceState(member, wasInVoice, isInVoice, now = Date.now(), options = {}) {
   if (!member?.guild || member.user?.bot) return;
+  const wasAfk = Boolean(options.wasAfk);
+  const isAfk = Boolean(options.isAfk);
   const row = ensureMember(member, now);
   let seconds = Math.max(0, Number(row.voice_seconds) || 0);
   let started = row.voice_started_at == null ? null : Number(row.voice_started_at);
-  if (wasInVoice && started != null) {
+
+  // Close only a previously counted non-AFK voice interval.
+  if (wasInVoice && !wasAfk && started != null) {
     seconds += Math.max(0, Math.floor((now - started) / 1000));
     started = null;
+  } else if (wasAfk || !wasInVoice) {
+    started = null;
   }
-  if (isInVoice) started = now;
-  db.prepare("UPDATE member_rank_activity SET voice_seconds=?,voice_started_at=?,last_activity_at=CASE WHEN ? THEN ? ELSE last_activity_at END WHERE guild_id=? AND user_id=?")
-    .run(seconds, started, isInVoice ? 1 : 0, now, member.guild.id, member.id);
+
+  // Start counting only when the member is in a non-AFK voice channel.
+  if (isInVoice && !isAfk) started = now;
+  const meaningfulVoiceActivity = isInVoice && !isAfk;
+  db.prepare(`
+    UPDATE member_rank_activity
+    SET voice_seconds=?,voice_started_at=?,
+        last_activity_at=CASE WHEN ? THEN ? ELSE last_activity_at END
+    WHERE guild_id=? AND user_id=?
+  `).run(seconds, started, meaningfulVoiceActivity ? 1 : 0, now, member.guild.id, member.id);
 }
 
 function snapshot(row, now = Date.now()) {
@@ -107,9 +143,11 @@ async function evaluateMember(member, now = Date.now()) {
     // Preserve an existing rank during the first rollout: historical message/voice
     // counts cannot be reconstructed reliably from the legacy XP table.
     const existingRank = member.roles.cache.find((item) =>
-      RANKS.some((rank) => item.name.trim().toUpperCase().endsWith(rank.name)));
+      RANKS.some((rank) => item.name.trim().toUpperCase() === rank.name ||
+        item.name.trim().toUpperCase().endsWith(` ${rank.name}`)));
     if (existingRank) {
-      const rankName = RANKS.find((rank) => existingRank.name.trim().toUpperCase().endsWith(rank.name))?.name;
+      const rankName = RANKS.find((rank) => existingRank.name.trim().toUpperCase() === rank.name ||
+        existingRank.name.trim().toUpperCase().endsWith(` ${rank.name}`))?.name;
       if (rankName) {
         db.prepare("UPDATE member_rank_activity SET current_rank=? WHERE guild_id=? AND user_id=?")
           .run(rankName, member.guild.id, member.id);
@@ -132,12 +170,17 @@ async function evaluateMember(member, now = Date.now()) {
   }
 
   const target = RANKS[targetIndex];
-  const role = member.guild.roles.cache.find((item) => item.name.trim().toUpperCase().endsWith(target.name));
+  const role = member.guild.roles.cache.find((item) => {
+    const name = item.name.trim().toUpperCase();
+    return name === target.name || name.endsWith(` ${target.name}`);
+  });
   if (!role) return { changed: false, error: "missing_role", rank: target.name };
   if (!role.editable) return { changed: false, error: "role_not_editable", rank: target.name };
 
-  const rankRoles = member.guild.roles.cache.filter((item) =>
-    RANKS.some((rank) => item.name.trim().toUpperCase().endsWith(rank.name)));
+  const rankRoles = member.guild.roles.cache.filter((item) => {
+    const name = item.name.trim().toUpperCase();
+    return RANKS.some((rank) => name === rank.name || name.endsWith(` ${rank.name}`));
+  });
   const oldRankRole = rankRoles.find((item) => member.roles.cache.has(item.id));
   if (oldRankRole?.id === role.id && row.current_rank === target.name) return { changed: false, rank: target.name };
 
