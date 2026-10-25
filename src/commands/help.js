@@ -2,28 +2,19 @@ const { SlashCommandBuilder, EmbedBuilder, MessageFlags, PermissionFlagsBits } =
 
 function canSeeAdminHelp(interaction) {
   if (!interaction.inGuild()) return false;
-  if (
-    interaction.user.id === interaction.guild.ownerId ||
-    interaction.memberPermissions?.has(PermissionFlagsBits.Administrator) ||
-    interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild)
-  ) return true;
-
+  if (interaction.user.id === interaction.guild.ownerId ||
+      interaction.memberPermissions?.has(PermissionFlagsBits.Administrator) ||
+      interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild)) return true;
   const roleNames = interaction.member?.roles?.cache
     ? [...interaction.member.roles.cache.values()].map((role) => String(role.name || "").trim().toUpperCase())
     : [];
-  return roleNames.some((name) =>
-    ["CHIEF TECH ADMIN", "ADMINISTRATOR", "HEAD MODERATOR"].includes(name)
-  );
+  return roleNames.some((name) => ["CHIEF TECH ADMIN", "ADMINISTRATOR", "HEAD MODERATOR"].includes(name));
 }
-
 module.exports = {
-  data: new SlashCommandBuilder()
-    .setName("help")
-    .setDescription("Список команд HeradeLegend с учётом твоих прав."),
+  data: new SlashCommandBuilder().setName("help").setDescription("Список команд HeradeLegend с учётом твоих прав."),
   async execute(interaction) {
     const adminView = canSeeAdminHelp(interaction);
-    const embed = new EmbedBuilder()
-      .setColor(0x5865f2)
+    const embed = new EmbedBuilder().setColor(0x5865f2)
       .setTitle(adminView ? "🕊 HeradeLegend — команды и управление" : "🕊 HeradeLegend — команды участника")
       .setDescription(adminView
         ? "Показаны обычные команды и административные команды, доступные персоналу. Доступ к самим функциям дополнительно проверяется ботом."
@@ -32,45 +23,30 @@ module.exports = {
         name: "📌 Основные команды",
         value: [
           "`/help` — список команд с учётом твоих прав.",
-          "`/commandrules` — подробная справка по командам и правилам их использования.",
+          "`/commandrules` — подробная справка по командам.",
           "`/ping` — проверить отклик бота.",
-          "`/botinfo` — посмотреть сведения о боте и время работы процесса.",
-          "`/profile` — посмотреть свой уровень, XP, баланс и прогресс до следующего уровня.",
-          "`/profile member:@участник` — посмотреть профиль другого участника сервера.",
-          "`/leaderboard` — рейтинг участников по рангу, сообщениям, активным дням и голосовой активности."
+          "`/botinfo` — сведения о боте и времени работы.",
+          "`/profile` — уровень, XP, баланс и кастомизация профиля.",
+          "`/profile member:@участник` — профиль другого участника.",
+          "`/leaderboard` — рейтинг по рангу и активности.",
+          "`/balance` — проверить баланс монет.",
+          "`/daily` — получить 100 монет раз в 24 часа.",
+          "`/shop` — каталог титулов, значков, рамок и цветов.",
+          "`/buy item_id:<ID>` — купить предмет из магазина.",
+          "`/inventory` — посмотреть купленные предметы.",
+          "`/equip item_id:<ID>` — применить предмет; без ID показать текущее оформление.",
+          "`/equip снять:<тип>` — снять титул, значок, рамку или цвет."
         ].join("\n")
       });
-
-    if (adminView) {
-      embed.addFields(
-        {
-          name: "🛡️ Административные команды",
-          value: [
-            "`/admin` — открыть интерактивную панель управления участниками, XP, модерацией, ролями доступа, настройками, статистикой, аудитом и функциями бота.",
-            "`/serverconfig status` — просмотреть текущие настройки сервера.",
-            "`/serverconfig welcome-channel channel:#канал` — выбрать канал приветствий.",
-            "`/serverconfig welcome-message message:текст` — настроить текст приветствия.",
-            "`/serverconfig goodbye-channel channel:#канал` — выбрать канал сообщений об уходе.",
-            "`/serverconfig goodbye-message message:текст` — настроить текст сообщения об уходе.",
-            "`/serverconfig autorole role:@роль` — назначить автоматическую роль новым участникам.",
-            "`/serverconfig mod-log-channel channel:#канал` — выбрать канал журнала модерации.",
-            "`/serverconfig reset-welcome` — отключить приветствия.",
-            "`/serverconfig reset-goodbye` — отключить сообщения об уходе.",
-            "`/serverconfig reset-autorole` — отключить автоматическую роль.",
-            "`/serverconfig reset-mod-log` — сбросить канал журнала модерации."
-          ].join("\n")
-        },
-        {
-          name: "🔐 Доступ администратора",
-          value: [
-            "Для /serverconfig нужно право «Управление сервером».",
-            "Для /admin требуется разрешение Discord или настроенная роль доступа. Каждое действие панели дополнительно проверяется.",
-            "В справке перечислены команды, но фактические действия доступны только при наличии соответствующих прав."
-          ].join("\n")
-        }
-      );
-    }
-
+    if (adminView) embed.addFields(
+      { name: "🛡️ Административные команды", value: [
+        "`/admin` — интерактивная панель управления.",
+        "`/economy-admin выдать` — выдать валюту участнику.",
+        "`/economy-admin снять` — снять валюту участника; баланс не может стать отрицательным.",
+        "`/serverconfig` — настройка каналов, приветствий и ролей."
+      ].join("\n") },
+      { name: "🔐 Доступ", value: "Для административных действий нужны соответствующие права Discord. Экономические корректировки требуют права «Управление сервером»." }
+    );
     embed.setFooter({ text: "HeradeLegend • Дух Свободы 🕊" });
     await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
   },
