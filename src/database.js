@@ -81,5 +81,11 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_admin_audit_guild_id ON admin_audit(guild_id, id);
 `);
 
+// Additive migration: keep existing moderation cases while recording timeout duration.
+const moderationColumns = db.prepare("PRAGMA table_info(moderation_cases)").all().map((column) => column.name);
+if (!moderationColumns.includes("duration_minutes")) {
+  db.exec("ALTER TABLE moderation_cases ADD COLUMN duration_minutes INTEGER");
+}
+
 logger.info(`SQLite database ready at ${filename}`);
 module.exports = db;
