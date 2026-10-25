@@ -101,7 +101,22 @@ async function sendDm(member, text) {
 
 async function evaluateMember(member, now = Date.now()) {
   if (!member || member.user?.bot || !member.guild) return;
-  let row = ensureMember(member, now);
+  let row = getRow.get(member.guild.id, member.id);
+  if (!row) {
+    row = ensureMember(member, now);
+    // Preserve an existing rank during the first rollout: historical message/voice
+    // counts cannot be reconstructed reliably from the legacy XP table.
+    const existingRank = member.roles.cache.find((item) =>
+      RANKS.some((rank) => item.name.trim().toUpperCase().endsWith(rank.name)));
+    if (existingRank) {
+      const rankName = RANKS.find((rank) => existingRank.name.trim().toUpperCase().endsWith(rank.name))?.name;
+      if (rankName) {
+        db.prepare("UPDATE member_rank_activity SET current_rank=? WHERE guild_id=? AND user_id=?")
+          .run(rankName, member.guild.id, member.id);
+        row = getRow.get(member.guild.id, member.id);
+      }
+    }
+  }
   const stats = snapshot(row, now);
   const rankIndex = rankIndexFor(row, now);
   const currentIndex = RANKS.findIndex((rank) => rank.name === row.current_rank);
