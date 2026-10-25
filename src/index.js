@@ -192,7 +192,7 @@ client.on(Events.MessageCreate, async (message) => {
   if (!message.guild || message.author.bot || !message.content.trim()) return;
 
   try {
-    const result = addMessageXp(message.guild.id, message.author.id);
+    const result = addMessageXp(message.guild.id, message.author.id, Date.now(), message.content);
     if (result.awarded && result.level > result.previousLevel) logger.info(`Member leveled up: guild=${message.guild.id} user=${message.author.id} level=${result.level}`);
   } catch (error) { logger.error("Member activity XP could not be saved.", error); }
 
