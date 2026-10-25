@@ -94,7 +94,7 @@ async function notifyPunishedUser(interaction, action, target, reason, durationM
     action === "timeout" ? `**Длительность:** ${durationMinutes} мин.` : "",
     endText,
     `**Модератор:** ${interaction.user.tag}`,
-  ].filter(Boolean).join("\\n");
+  ].filter(Boolean).join("\n");
   try {
     await target.send({ content: message, allowedMentions: { parse: [] } });
     return true;
