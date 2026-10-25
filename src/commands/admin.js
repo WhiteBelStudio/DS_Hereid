@@ -201,6 +201,10 @@ module.exports = {
         ], flags: MessageFlags.Ephemeral }); return true;
       }
       if (section === "moderation") {
+        if (!isFeatureEnabled(interaction.guildId, "moderation")) {
+          await interaction.reply({ content: "🛑 Панель модерации отключена. Включи её в разделе «Функции бота».", components: [backRow()], flags: MessageFlags.Ephemeral });
+          return true;
+        }
         await interaction.reply({ content: "Выбери действие. Все наказания требуют указать цель и причину.", components: [
           new ActionRowBuilder().addComponents(
             new ButtonBuilder().setCustomId("ha:mod:prepare").setLabel("Наказать участника").setEmoji("🛡️").setStyle(ButtonStyle.Danger),
