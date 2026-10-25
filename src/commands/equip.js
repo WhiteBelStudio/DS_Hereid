@@ -9,7 +9,7 @@ module.exports = {
       .addChoices({name:"Титул",value:"title"},{name:"Значок",value:"badge"},{name:"Рамку",value:"frame"},{name:"Цвет",value:"color"})),
   async execute(interaction) {
     if (!interaction.inGuild()) return interaction.reply({content:"Профили доступны только на сервере.",flags:MessageFlags.Ephemeral});
-    if (economyDisabled(interaction)) return;
+    if (await economyDisabled(interaction)) return;
     const itemId = interaction.options.getString("item_id");
     const removeType = interaction.options.getString("снять");
     if (itemId && removeType) return interaction.reply({content:"Укажи предмет или тип оформления для снятия, но не оба сразу.",flags:MessageFlags.Ephemeral});
