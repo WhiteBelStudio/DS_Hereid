@@ -372,8 +372,11 @@ module.exports = {
     }
     if (id === "ha:user:lookup" || id === "ha:user:xp") {
       if (!allowed(interaction, "users")) { await interaction.reply({content:"⛔ Нет доступа.",flags:MessageFlags.Ephemeral}); return true; }
-      await interaction.showModal(idModal(id === "ha:user:xp" ? "ha:modal:xp" : "ha:modal:user", id === "ha:user:xp" ? "Изменить XP участника" : "Найти участника"));
+      const modal = idModal(id === "ha:user:xp" ? "ha:modal:xp" : "ha:modal:user", id === "ha:user:xp" ? "Изменить XP участника" : "Найти участника");
+      if (id === "ha:user:xp") modal.addComponents(new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId("amount").setLabel("Изменение XP (+/-)").setPlaceholder("Например: 100 или -50").setStyle(TextInputStyle.Short).setMinLength(1).setMaxLength(8).setRequired(true)));
+      await interaction.showModal(modal);
       return true;
+    }
     }
     if ((id.startsWith("ha:mod:") || id.startsWith("ha:punish:") || id === "ha:modal:mod") && !isFeatureEnabled(interaction.guildId, "moderation")) {
       await interaction.reply({ content: "🛑 Панель модерации отключена владельцем или администратором сервера.", flags: MessageFlags.Ephemeral });
@@ -428,15 +431,8 @@ module.exports = {
     if (interaction.isModalSubmit() && id === "ha:modal:xp") {
       if(!allowed(interaction,"users")){await interaction.reply({content:"⛔ Нет доступа.",flags:MessageFlags.Ephemeral});return true;}
       const target=interaction.fields.getTextInputValue("target_id").trim();
-      if(!validId(target)){await interaction.reply({content:"Некорректный Discord ID.",flags:MessageFlags.Ephemeral});return true;}
-      const modal=new ModalBuilder().setCustomId(`ha:modal:xpvalue:${target}`).setTitle("Изменить XP");
-      modal.addComponents(new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId("amount").setLabel("Изменение XP (+/-)").setPlaceholder("Например: 100 или -50").setStyle(TextInputStyle.Short).setMinLength(1).setMaxLength(8).setRequired(true)));
-      await interaction.showModal(modal);return true;
-    }
-    if (interaction.isModalSubmit() && id.startsWith("ha:modal:xpvalue:")) {
-      if(!allowed(interaction,"users")){await interaction.reply({content:"⛔ Нет доступа.",flags:MessageFlags.Ephemeral});return true;}
-      const target=id.split(":").at(-1), amount=Number(interaction.fields.getTextInputValue("amount"));
-      if(!validId(target)||!Number.isSafeInteger(amount)||amount===0||Math.abs(amount)>1000000){await interaction.reply({content:"Укажи целое изменение XP от -1 000 000 до 1 000 000, кроме нуля.",flags:MessageFlags.Ephemeral});return true;}
+      const amount=Number(interaction.fields.getTextInputValue("amount"));
+      if(!validId(target)||!Number.isSafeInteger(amount)||amount===0||Math.abs(amount)>1000000){await interaction.reply({content:"Проверь Discord ID и укажи целое изменение XP от -1 000 000 до 1 000 000, кроме нуля.",flags:MessageFlags.Ephemeral});return true;}
       const { changeXp } = require("../member-profile");
       const updated = changeXp(interaction.guildId, target, amount);
       audit(interaction.guildId,interaction.user.id,"xp_changed",target,`${amount}; итог: ${updated.xp}; уровень: ${updated.level}`);
