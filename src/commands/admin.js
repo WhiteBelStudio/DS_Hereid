@@ -4,6 +4,7 @@ const {
   ModalBuilder, TextInputBuilder, TextInputStyle,
 } = require("discord.js");
 const db = require("../database");
+const { FEATURES, isFeatureEnabled, setFeatureEnabled, listFeatures } = require("../features");
 
 const SECTIONS = {
   users: ["👥 Участники", "Просмотр профилей и статистики участников."],
@@ -12,6 +13,7 @@ const SECTIONS = {
   settings: ["⚙️ Настройки сервера", "Приветствия, роли и каналы."],
   stats: ["📊 Статистика", "Состояние сервера и активность."],
   logs: ["📜 Журнал аудита", "Последние действия администраторов."],
+  features: ["🧩 Функции бота", "Состояние и включение обычных функций."],
 };
 
 function audit(guildId, actorId, action, targetId = null, details = "") {
@@ -78,6 +80,9 @@ function mainRows() {
       new ButtonBuilder().setCustomId("ha:stats").setLabel("Статистика").setEmoji("📊").setStyle(ButtonStyle.Secondary),
       new ButtonBuilder().setCustomId("ha:logs").setLabel("Аудит").setEmoji("📜").setStyle(ButtonStyle.Secondary),
     ),
+    new ActionRowBuilder().addComponents(
+      new ButtonBuilder().setCustomId("ha:features").setLabel("Функции бота").setEmoji("🧩").setStyle(ButtonStyle.Success),
+    ),
   ];
 }
 function backRow() {
@@ -121,7 +126,55 @@ module.exports = {
       else await interaction.reply(payload);
       return true;
     }
-    // Only the seven top-level section buttons are checked here. Previously
+    if (id === "ha:features" || id.startsWith("ha:feature:toggle:")) {
+      if (!allowed(interaction, "features")) {
+        await interaction.reply({ content: "⛔ Нет доступа к управлению функциями бота.", flags: MessageFlags.Ephemeral });
+        return true;
+      }
+      let changed = null;
+      if (id.startsWith("ha:feature:toggle:")) {
+        const key = id.slice("ha:feature:toggle:".length);
+        if (!Object.prototype.hasOwnProperty.call(FEATURES, key)) {
+          await interaction.reply({ content: "Неизвестная функция. Обнови панель командой /admin.", flags: MessageFlags.Ephemeral });
+          return true;
+        }
+        const enabled = !isFeatureEnabled(interaction.guildId, key);
+        const persist = db.transaction(() => {
+          setFeatureEnabled(interaction.guildId, key, enabled, interaction.user.id);
+          audit(interaction.guildId, interaction.user.id, "feature_toggled", null, `${key}: ${enabled ? "enabled" : "disabled"}`);
+        });
+        persist();
+        changed = { key, enabled };
+      }
+      const current = listFeatures(interaction.guildId);
+      const embed = new EmbedBuilder().setColor(0x5865f2).setTitle("🧩 Функции HeradeLegend")
+        .setDescription("Нажми кнопку функции, чтобы включить или отключить её. Изменения сохраняются в SQLite и действуют сразу.")
+        .addFields(current.map((feature) => ({
+          name: `${feature.enabled ? "🟢" : "🔴"} ${feature.label}`,
+          value: `${feature.description}. Состояние: **${feature.enabled ? "Включена" : "Отключена"}**.`,
+          inline: false,
+        })))
+        .setFooter({ text: "Изменения записываются в журнал аудита; существующие данные не сбрасываются." });
+      const buttons = current.map((feature) => new ButtonBuilder()
+        .setCustomId(`ha:feature:toggle:${feature.key}`)
+        .setLabel(feature.enabled ? `Отключить: ${feature.label}` : `Включить: ${feature.label}`)
+        .setStyle(feature.enabled ? ButtonStyle.Danger : ButtonStyle.Success));
+      const rows = [];
+      for (let i = 0; i < buttons.length; i += 5) {
+        rows.push(new ActionRowBuilder().addComponents(buttons.slice(i, i + 5)));
+      }
+      rows.push(backRow());
+      const payload = { embeds: [embed], components: rows, flags: MessageFlags.Ephemeral };
+      if (interaction.isButton() && (id === "ha:features" || id.startsWith("ha:feature:toggle:"))) {
+        if (interaction.replied || interaction.deferred) await interaction.followUp(payload);
+        else if (typeof interaction.update === "function") await interaction.update(payload);
+        else await interaction.reply(payload);
+      } else {
+        await interaction.reply(payload);
+      }
+      return true;
+    }
+    // Only the eight top-level section buttons are checked here. Previously
     // this caught every "ha:*" button, including nested actions such as
     // ha:user:lookup and ha:mod:prepare, and rejected them as unknown sections
     // before their own handlers could run.
@@ -166,7 +219,7 @@ module.exports = {
           new ActionRowBuilder().addComponents(new StringSelectMenuBuilder().setCustomId("ha:roles:select").setPlaceholder("Выбери роль").addOptions(options)),
           new ActionRowBuilder().addComponents(new StringSelectMenuBuilder().setCustomId("ha:roles:section").setPlaceholder("Раздел доступа").addOptions(
             {label:"Вся панель",value:"all"},{label:"Участники",value:"users"},{label:"Модерация",value:"moderation"},
-{label:"Настройки",value:"settings"},{label:"Статистика",value:"stats"},{label:"Аудит",value:"logs"}
+{label:"Настройки",value:"settings"},{label:"Статистика",value:"stats"},{label:"Аудит",value:"logs"},{label:"Функции бота",value:"features"}
           )),
           new ActionRowBuilder().addComponents(
             new ButtonBuilder().setCustomId("ha:roles:grant").setLabel("Выдать доступ").setStyle(ButtonStyle.Success),
@@ -315,6 +368,10 @@ module.exports = {
     if (id === "ha:user:lookup" || id === "ha:user:xp") {
       if (!allowed(interaction, "users")) { await interaction.reply({content:"⛔ Нет доступа.",flags:MessageFlags.Ephemeral}); return true; }
       await interaction.showModal(idModal(id === "ha:user:xp" ? "ha:modal:xp" : "ha:modal:user", id === "ha:user:xp" ? "Изменить XP участника" : "Найти участника"));
+      return true;
+    }
+    if ((id.startsWith("ha:mod:") || id.startsWith("ha:punish:") || id === "ha:modal:mod") && !isFeatureEnabled(interaction.guildId, "moderation")) {
+      await interaction.reply({ content: "🛑 Панель модерации отключена владельцем или администратором сервера.", flags: MessageFlags.Ephemeral });
       return true;
     }
     if (id === "ha:mod:prepare") {
