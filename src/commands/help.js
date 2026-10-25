@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
+const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require("discord.js");
 
 module.exports = {
   data: new SlashCommandBuilder().setName("help").setDescription("Показать доступные команды."),
@@ -31,6 +31,6 @@ module.exports = {
         "В панели доступны: участники, XP, модерация, роли доступа, настройки сервера, функции бота, статистика и аудит.",
       ].join("\n"))
       .setFooter({ text: "HeradeLegend • Дух Свободы 🕊" });
-    await interaction.reply({ embeds: [embed], ephemeral: true });
+    await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
   },
 };
