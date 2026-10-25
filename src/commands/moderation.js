@@ -103,7 +103,8 @@ async function notifyPunishedUser(interaction, action, target, reason, durationM
     return false;
   }
 }
-\nasync function applyAction(interaction, action, target, reason, durationMinutes = null) {
+
+async function applyAction(interaction, action, target, reason, durationMinutes = null) {
   if (!target) {
     return interaction.reply({ content: "⛔ Не удалось определить цель наказания.", flags: MessageFlags.Ephemeral });
   }
@@ -150,9 +151,10 @@ async function notifyPunishedUser(interaction, action, target, reason, durationM
 
     const caseId = recordCase(interaction.guildId, target.id, interaction.user.id, action, reason, durationMinutes);
     await sendModLog(interaction, action, target, reason, durationMinutes, caseId);
+    const dmSent = await notifyPunishedUser(interaction, action, target, reason, durationMinutes);
     const durationText = durationMinutes ? `\nДлительность: ${durationMinutes} мин.` : "";
     return interaction.reply({
-      content: `✅ ${ACTION_LABELS[action]} применено.\nЦель: <@${target.id}>\nПричина: ${reason}${durationText}\nНомер случая: #${caseId}`,
+      content: `✅ ${ACTION_LABELS[action]} применено.\nЦель: <@${target.id}>\nПричина: ${reason}${durationText}\nНомер случая: #${caseId}${dmSent ? "\\n📩 Уведомление отправлено пользователю в личные сообщения." : "\\n⚠️ Не удалось отправить уведомление в личные сообщения (возможно, они закрыты)."}`,
       flags: MessageFlags.Ephemeral,
       allowedMentions: { parse: [] },
     });
