@@ -9,7 +9,7 @@ module.exports = {
   data: new SlashCommandBuilder().setName("daily").setDescription("Забрать ежедневную награду."),
   async execute(interaction) {
     if (!interaction.inGuild()) return interaction.reply({ content: "Награды доступны только на сервере.", flags: MessageFlags.Ephemeral });
-    if (economyDisabled(interaction)) return;
+    if (await economyDisabled(interaction)) return;
     const result = claimDaily(interaction.guildId, interaction.user.id);
     const embed = new EmbedBuilder().setColor(result.claimed ? 0x1ABC9C : 0xE67E22).setTitle(result.claimed ? "🎁 Ежедневная награда" : "⏳ Награда уже получена")
       .setDescription(result.claimed ? `Начислено **+${result.reward}** монет.\nБаланс: **${result.balance.toLocaleString("ru-RU")}** монет.` : `Следующую награду можно забрать через **${formatDuration(result.remainingMs)}**.\nБаланс: **${result.balance.toLocaleString("ru-RU")}** монет.`);
