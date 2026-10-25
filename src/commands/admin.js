@@ -373,7 +373,10 @@ module.exports = {
     if (id === "ha:user:lookup" || id === "ha:user:xp") {
       if (!allowed(interaction, "users")) { await interaction.reply({content:"⛔ Нет доступа.",flags:MessageFlags.Ephemeral}); return true; }
       const modal = idModal(id === "ha:user:xp" ? "ha:modal:xp" : "ha:modal:user", id === "ha:user:xp" ? "Изменить XP участника" : "Найти участника");
-      if (id === "ha:user:xp") modal.addComponents(new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId("amount").setLabel("Изменение XP (+/-)").setPlaceholder("Например: 100 или -50").setStyle(TextInputStyle.Short).setMinLength(1).setMaxLength(8).setRequired(true)));
+      if (id === "ha:user:xp") modal.addComponents(
+        new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId("target_id").setLabel("Discord ID участника").setPlaceholder("Твой Discord ID: 123456789012345678").setStyle(TextInputStyle.Short).setMinLength(17).setMaxLength(20).setRequired(true)),
+        new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId("amount").setLabel("Изменение XP (+/-)").setPlaceholder("Например: 100 или -50").setStyle(TextInputStyle.Short).setMinLength(1).setMaxLength(8).setRequired(true))
+      );
       await interaction.showModal(modal);
       return true;
     }
