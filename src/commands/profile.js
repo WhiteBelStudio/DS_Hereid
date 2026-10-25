@@ -1,9 +1,9 @@
-const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
+const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require("discord.js");
 const { getProfile, levelForXp } = require("../member-profile");
 module.exports = {
   data: new SlashCommandBuilder().setName("profile").setDescription("Посмотреть профиль и прогресс участника.").addUserOption((option) => option.setName("member").setDescription("Чей профиль посмотреть").setRequired(false)),
   async execute(interaction) {
-    if (!interaction.inGuild()) return interaction.reply({ content: "Профили доступны только на сервере.", ephemeral: true });
+    if (!interaction.inGuild()) return interaction.reply({ content: "Профили доступны только на сервере.", flags: MessageFlags.Ephemeral });
     const user = interaction.options.getUser("member") || interaction.user;
     const member = await interaction.guild.members.fetch(user.id).catch(() => null);
     const profile = getProfile(interaction.guildId, user.id);
