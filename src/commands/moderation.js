@@ -75,8 +75,8 @@ async function sendModLog(interaction, action, target, reason, durationMinutes =
 }
 
 async function applyAction(interaction, action, target, reason, durationMinutes = null) {
-  if (!target || target.bot) {
-    return interaction.reply({ content: "⛔ Цель не найдена или является ботом. Наказания для ботов этой командой отключены.", flags: MessageFlags.Ephemeral });
+  if (!target) {
+    return interaction.reply({ content: "⛔ Не удалось определить цель наказания.", flags: MessageFlags.Ephemeral });
   }
   if (target.id === interaction.user.id) {
     return interaction.reply({ content: "⛔ Нельзя наказать самого себя.", flags: MessageFlags.Ephemeral });
@@ -97,7 +97,7 @@ async function applyAction(interaction, action, target, reason, durationMinutes 
   }
 
   const botMember = await interaction.guild.members.fetchMe();
-  if (member && member.roles.highest.position >= botMember.roles.highest.position) {
+  if (action !== "warn" && member && member.roles.highest.position >= botMember.roles.highest.position) {
     return interaction.reply({ content: "⛔ Роль цели находится выше или на одном уровне с ролью бота.", flags: MessageFlags.Ephemeral });
   }
 
