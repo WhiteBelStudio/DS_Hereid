@@ -27,6 +27,28 @@ client.config = config;
 client.logger = logger;
 client.commands = new Collection();
 
+async function notifyAchievementUnlocks(user, guild, achievements) {
+  if (!achievements?.length) return;
+  for (const achievement of achievements) {
+    logger.info(`Achievement unlocked: guild=${guild.id} user=${user.id} achievement=${achievement.id}`);
+  }
+
+  const lines = achievements.map((achievement) =>
+    `${achievement.emoji} **${achievement.name}** — ${achievement.description}`,
+  );
+  const message = [
+    `🏅 **Новые достижения в HeradeLegend — ${guild.name}!**`,
+    "",
+    ...lines,
+    "",
+    "Посмотреть всю коллекцию можно командой `/achievements`.",
+  ].join("\n");
+
+  await user.send({ content: message }).catch((error) => {
+    logger.debug(`Could not DM achievement notification to ${user.id}: ${error.message || error}`);
+  });
+}
+
 function loadCommands() {
   const commandsDir = path.join(__dirname, "commands");
   if (!fs.existsSync(commandsDir) || !fs.statSync(commandsDir).isDirectory()) {
@@ -211,9 +233,7 @@ client.on(Events.MessageCreate, async (message) => {
     if (member) {
       recordMessage(member, message.content);
       const newlyAwarded = evaluateAchievements(message.guild.id, message.author.id);
-      for (const achievement of newlyAwarded) {
-        logger.info(`Achievement unlocked: guild=${message.guild.id} user=${message.author.id} achievement=${achievement.id}`);
-      }
+      await notifyAchievementUnlocks(message.author, message.guild, newlyAwarded);
       await evaluateMember(member).catch((error) => logger.warn("Automatic rank evaluation failed.", error));
     }
     if (result.awarded && result.level > result.previousLevel) logger.info(`Member leveled up: guild=${message.guild.id} user=${message.author.id} level=${result.level}`);
@@ -247,9 +267,7 @@ client.on(Events.VoiceStateUpdate, async (oldState, newState) => {
     const isAfk = Boolean(afkChannelId && newState.channelId === afkChannelId);
     recordVoiceState(member, wasInVoice, isInVoice, Date.now(), { wasAfk, isAfk });
     const newlyAwarded = evaluateAchievements(member.guild.id, member.id);
-    for (const achievement of newlyAwarded) {
-      logger.info(`Achievement unlocked: guild=${member.guild.id} user=${member.id} achievement=${achievement.id}`);
-    }
+    await notifyAchievementUnlocks(member.user, member.guild, newlyAwarded);
     await evaluateMember(member);
   } catch (error) {
     logger.warn("Voice activity tracking failed.", error);
