@@ -164,7 +164,7 @@ function makeSearchRows(guildId, userId, searchId, tracks) {
   for (let i = 0; i < tracks.length; i += 4) {
     rows.push(new ActionRowBuilder().addComponents(tracks.slice(i, i + 4).map((track, offset) =>
       new ButtonBuilder().setCustomId("music:pick:" + guildId + ":" + userId + ":" + searchId + ":" + (i + offset))
-        .setLabel((i + offset + 1) + ". " + track.title).setLabel((i + offset + 1) + ". " + track.title).setLabel((i + offset + 1) + ". " + track.title).setStyle(ButtonStyle.Primary)
+        .setLabel(((i + offset + 1) + ". " + track.title).slice(0, 80)).setStyle(ButtonStyle.Primary)
     )));
   }
   return rows;
