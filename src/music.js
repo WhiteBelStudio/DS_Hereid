@@ -4,6 +4,9 @@ const {
 } = require("@discordjs/voice");
 const play = require("play-dl");
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
+const db = require("./database");
+function getMusicSettings(guildId) { return db.prepare("SELECT * FROM music_settings WHERE guild_id=?").get(guildId) || { enabled: 1, voice_channel_id: null, volume: 50, repeat_mode: "off" }; }
+function ensureMusicSettings(guildId, actorId) { db.prepare("INSERT OR IGNORE INTO music_settings (guild_id, updated_by) VALUES (?, ?)").run(guildId, actorId || "system"); return getMusicSettings(guildId); }
 
 const sessions = new Map();
 const searches = new Map();
@@ -140,13 +143,18 @@ function ensureSession(guild, voiceChannel) {
 }
 
 async function enqueue(interaction, track) {
+  const settings = getMusicSettings(interaction.guildId);
+  if (!settings.enabled) throw new Error("Музыкальный плеер отключён администратором в панели /admin.");
   const voiceChannel = interaction.member && interaction.member.voice && interaction.member.voice.channel;
   if (!voiceChannel) throw new Error("Сначала зайди в голосовой канал.");
+  if (settings.voice_channel_id && voiceChannel.id !== settings.voice_channel_id) throw new Error("Музыка разрешена только в канале <#" + settings.voice_channel_id + ">.");
   const permissions = voiceChannel.permissionsFor(interaction.guild.members.me);
   if (!permissions || !permissions.has(["Connect", "Speak"])) {
     throw new Error("Мне нужны права «Подключаться» и «Говорить» в этом голосовом канале.");
   }
   const session = ensureSession(interaction.guild, voiceChannel);
+  session.volume = Number(settings.volume ?? 50);
+  session.repeat = settings.repeat_mode || "off";
   session.textChannelId = interaction.channelId;
   track.requestedBy = interaction.user.id;
   if (!session.current && session.player.state.status === AudioPlayerStatus.Idle && !session.busy) {
@@ -209,4 +217,4 @@ function stopSession(guildId) {
   return true;
 }
 
-module.exports = { AudioPlayerStatus, formatTime, getSession, searchTracks, makeNowPlayingEmbed, makeSearchRows, enqueue, handleButton, stopSession, searches };
+module.exports = { AudioPlayerStatus, formatTime, getSession, searchTracks, makeNowPlayingEmbed, makeSearchRows, enqueue, handleButton, stopSession, searches, getMusicSettings, ensureMusicSettings };
