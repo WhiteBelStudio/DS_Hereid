@@ -11,6 +11,7 @@ const { addMessageXp } = require("./member-profile");
 const { ensureMember, recordMessage, recordVoiceState, evaluateMember, evaluateGuild } = require("./rank-system");
 const { evaluateAchievements } = require("./achievements");
 const tickets = require("./tickets");
+const { startAutomationScheduler, stopAutomationScheduler } = require("./automation");
 
 const client = new Client({
   intents: [
@@ -92,6 +93,7 @@ const adminPanel = client.commands.get("admin");
 client.once(Events.ClientReady, async (readyClient) => {
   logger.info(`Logged in as ${readyClient.user.tag} (${readyClient.user.id})`);
   logger.info(`Connected to ${readyClient.guilds.cache.size} guild(s).`);
+  startAutomationScheduler(readyClient);
 
   const rankGuild = await readyClient.guilds.fetch(config.guildId).catch(() => null);
   if (rankGuild) {
@@ -306,6 +308,7 @@ async function shutdown(signal) {
   logger.info(`Received ${signal}; shutting down gracefully.`);
 
   try {
+    stopAutomationScheduler();
     client.destroy();
     if (db.open) db.close();
     logger.info("Discord client and database closed.");
