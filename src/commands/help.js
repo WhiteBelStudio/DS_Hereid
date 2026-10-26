@@ -35,7 +35,11 @@ module.exports = {
           "`/buy item_id:<ID>` — купить предмет из магазина.",
           "`/inventory` — посмотреть купленные предметы.",
           "`/ticket` — открыть приватное обращение в поддержку.",
+          "`/automod status` — проверить настройки автоматической модерации.",
           "`/automation list` — посмотреть запланированные объявления.",
+        "`/automod word-add` и `/automod word-remove` — настроить фильтр запрещённых слов и фраз.",
+        "`/automod exempt-add` и `/automod exempt-remove` — управлять исключениями каналов.",
+        "`/automod log-channel`, `/automod links`, `/automod mentions-limit`, `/automod delete-flagged` — настроить журнал и фильтры.",
           "`/equip item_id:<ID>` — применить предмет; без ID показать текущее оформление.",
           "`/equip снять:<тип>` — снять титул, значок, рамку или цвет."
         ].join("\n")
