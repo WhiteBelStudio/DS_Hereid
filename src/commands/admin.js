@@ -190,7 +190,9 @@ module.exports = {
         ),
         new ActionRowBuilder().addComponents(
           new ButtonBuilder().setCustomId("ha:music:volume-down").setLabel("Громкость −10").setStyle(ButtonStyle.Secondary),
-          new ButtonBuilder().setCustomId("ha:music:volume-up").setLabel("Громкость +10").setStyle(ButtonStyle.Secondary),
+          new ButtonBuilder().setCustomId("ha:music:volume-up").setLabel("Громкость +10").setStyle(ButtonStyle.Secondary)
+        ),
+        new ActionRowBuilder().addComponents(
           new ChannelSelectMenuBuilder().setCustomId("ha:music:channel").setPlaceholder("Выбрать разрешённый войс").setChannelTypes(ChannelType.GuildVoice).setMinValues(1).setMaxValues(1)
         ),
         new ActionRowBuilder().addComponents(
