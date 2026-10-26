@@ -17,7 +17,9 @@ const setStatement = db.prepare(`
 function isFeatureEnabled(guildId, key) {
   if (!Object.prototype.hasOwnProperty.call(FEATURES, key)) throw new Error(`Unknown feature: ${key}`);
   const row = getStatement.get(guildId, key);
-  return row ? row.enabled === 1 : true;
+  if (row) return row.enabled === 1;
+  // New automatic filters start disabled to avoid unexpectedly deleting messages before an admin configures them.
+  return key !== "automod";
 }
 function setFeatureEnabled(guildId, key, enabled, actorId) {
   if (!Object.prototype.hasOwnProperty.call(FEATURES, key)) throw new Error(`Unknown feature: ${key}`);
