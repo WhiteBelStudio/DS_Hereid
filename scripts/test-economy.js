@@ -12,11 +12,17 @@ const db = require("../src/database");
 const economy = require("../src/economy");
 const transactionsCommand = require("../src/commands/transactions");
 const questsCommand = require("../src/commands/quests");
+const commandRulesCommand = require("../src/commands/commandrules");
 const guild = process.env.GUILD_ID;
 const user = "12345678901234569";
 let passed = 0;
 function test(name, fn) { fn(); passed++; console.log(`[ OK ] ${name}`); }
 try {
+  test("daily reward amount and help commands stay aligned", () => {
+    assert.equal(economy.DAILY_REWARD, 100);
+    assert.equal(commandRulesCommand.data.toJSON().name, "commandrules");
+    assert.equal(typeof commandRulesCommand.execute, "function");
+  });
   test("daily reward credits exactly once per 24 hours", () => {
     const first = economy.claimDaily(guild, user, 1_000_000);
     assert.equal(first.claimed, true);
