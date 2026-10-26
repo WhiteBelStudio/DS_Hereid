@@ -161,5 +161,19 @@ if (!moderationColumns.includes("duration_minutes")) {
   db.exec("ALTER TABLE moderation_cases ADD COLUMN duration_minutes INTEGER");
 }
 
+/* Additive economy migration: old member rows and XP are preserved. */
+const memberStatsColumns = db.prepare("PRAGMA table_info(member_stats)").all().map((column) => column.name);
+for (const [name, definition] of [
+  ["xp", "INTEGER NOT NULL DEFAULT 0"],
+  ["level", "INTEGER NOT NULL DEFAULT 0"],
+  ["balance", "INTEGER NOT NULL DEFAULT 0"],
+  ["last_xp_at", "INTEGER NOT NULL DEFAULT 0"],
+  ["last_daily_at", "INTEGER NOT NULL DEFAULT 0"],
+]) {
+  if (!memberStatsColumns.includes(name)) {
+    db.exec(`ALTER TABLE member_stats ADD COLUMN ${name} ${definition}`);
+  }
+}
+
 logger.info(`SQLite database ready at ${filename}`);
 module.exports = db;
