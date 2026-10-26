@@ -118,7 +118,7 @@ function getDailyQuests(guildId, userId, now = Date.now()) {
     );
     return DAILY_QUESTS.map((task) => {
       const row = select.get(guildId, userId, dayKey, task.key);
-      return { ...task, progress: Math.min(task.target, Number(row?.progress || 0)), completed: Boolean(row?.completed_at) };
+      return { ...task, progress: Math.min(task.target, Number(row?.progress || 0)), completed: row?.completed_at !== null && row?.completed_at !== undefined };
     });
   });
   return run();
@@ -138,7 +138,7 @@ function recordQuestProgress(guildId, userId, taskKey, amount = 1, now = Date.no
     const current = db.prepare(
       "SELECT progress, completed_at FROM economy_daily_quests WHERE guild_id=? AND user_id=? AND day_key=? AND task_key=?",
     ).get(guildId, userId, dayKey, taskKey);
-    if (current.completed_at) {
+    if (current.completed_at !== null && current.completed_at !== undefined) {
       return { ok: true, completed: true, newlyCompleted: false, progress: task.target, reward: 0, balance: getBalance(guildId, userId).balance };
     }
     const progress = Math.min(task.target, Number(current.progress || 0) + amount);
