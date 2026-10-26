@@ -11,6 +11,7 @@ const { addMessageXp } = require("./member-profile");
 const { ensureMember, recordMessage, recordVoiceState, evaluateMember, evaluateGuild } = require("./rank-system");
 const { evaluateAchievements } = require("./achievements");
 const tickets = require("./tickets");
+const { moderateMessage } = require("./automod");
 const { startAutomationScheduler, stopAutomationScheduler } = require("./automation");
 
 const client = new Client({
@@ -246,6 +247,7 @@ client.on(Events.MessageCreate, async (message) => {
 
   try {
     await tickets.recordMessage(message);
+    await moderateMessage(message);
     const result = addMessageXp(message.guild.id, message.author.id, Date.now(), message.content);
     const member = message.member || await message.guild.members.fetch(message.author.id).catch(() => null);
     if (member) {
