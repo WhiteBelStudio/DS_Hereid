@@ -60,13 +60,12 @@ module.exports = {
         });
       }
     } else {
-      embed.addFields({
-        name: CATEGORY_LABELS[category] || category,
-        value: items.map((item) =>
-          `**${item.name}** — ${item.price.toLocaleString("ru-RU")} 🪙\n${item.description}\nID: ${String.fromCharCode(96)}${item.id}${String.fromCharCode(96)}`,
-        ).join("\n\n") || "В этой категории пока нет предметов.",
-        inline: false,
-      });
+      embed.addFields(items.map((item) => ({
+        name: `${item.name} — ${item.price.toLocaleString("ru-RU")} 🪙`,
+        value: `${item.description}\nID: ${String.fromCharCode(96)}${item.id}${String.fromCharCode(96)}`,
+        inline: true,
+      })));
+      if (!items.length) embed.addFields({ name: CATEGORY_LABELS[category] || category, value: "В этой категории пока нет предметов." });
     }
 
     embed.addFields({
