@@ -9,6 +9,7 @@ const db = require("./database");
 const { isFeatureEnabled } = require("./features");
 const { addMessageXp } = require("./member-profile");
 const { ensureMember, recordMessage, recordVoiceState, evaluateMember, evaluateGuild } = require("./rank-system");
+const { evaluateAchievements } = require("./achievements");
 
 const client = new Client({
   intents: [
@@ -209,6 +210,10 @@ client.on(Events.MessageCreate, async (message) => {
     const member = message.member || await message.guild.members.fetch(message.author.id).catch(() => null);
     if (member) {
       recordMessage(member, message.content);
+      const newlyAwarded = evaluateAchievements(message.guild.id, message.author.id);
+      for (const achievement of newlyAwarded) {
+        logger.info(`Achievement unlocked: guild=${message.guild.id} user=${message.author.id} achievement=${achievement.id}`);
+      }
       await evaluateMember(member).catch((error) => logger.warn("Automatic rank evaluation failed.", error));
     }
     if (result.awarded && result.level > result.previousLevel) logger.info(`Member leveled up: guild=${message.guild.id} user=${message.author.id} level=${result.level}`);
@@ -241,6 +246,10 @@ client.on(Events.VoiceStateUpdate, async (oldState, newState) => {
     const wasAfk = Boolean(afkChannelId && oldState.channelId === afkChannelId);
     const isAfk = Boolean(afkChannelId && newState.channelId === afkChannelId);
     recordVoiceState(member, wasInVoice, isInVoice, Date.now(), { wasAfk, isAfk });
+    const newlyAwarded = evaluateAchievements(member.guild.id, member.id);
+    for (const achievement of newlyAwarded) {
+      logger.info(`Achievement unlocked: guild=${member.guild.id} user=${member.id} achievement=${achievement.id}`);
+    }
     await evaluateMember(member);
   } catch (error) {
     logger.warn("Voice activity tracking failed.", error);
