@@ -49,8 +49,24 @@ db.exec(`
     channel_id TEXT UNIQUE,
     user_id TEXT NOT NULL,
     status TEXT NOT NULL DEFAULT 'open',
+    category TEXT NOT NULL DEFAULT 'general',
+    initial_message TEXT,
+    assigned_to TEXT,
+    closed_by TEXT,
+    close_reason TEXT,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     closed_at TEXT
+  );
+  CREATE TABLE IF NOT EXISTS support_ticket_messages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ticket_id INTEGER NOT NULL,
+    guild_id TEXT NOT NULL,
+    author_id TEXT NOT NULL,
+    author_tag TEXT NOT NULL,
+    content TEXT NOT NULL,
+    message_id TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   );
   CREATE TABLE IF NOT EXISTS admin_access_roles (
     guild_id TEXT NOT NULL,
@@ -80,6 +96,21 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_moderation_cases_guild_created ON moderation_cases(guild_id, created_at);
   CREATE INDEX IF NOT EXISTS idx_admin_audit_guild_id ON admin_audit(guild_id, id);
 `);
+
+// Additive migrations: preserve existing ticket records and extend them in place.
+const ticketColumns = db.prepare("PRAGMA table_info(tickets)").all().map((column) => column.name);
+for (const [name, definition] of [
+  ["category", "TEXT NOT NULL DEFAULT 'general'"],
+  ["initial_message", "TEXT"],
+  ["assigned_to", "TEXT"],
+  ["closed_by", "TEXT"],
+  ["close_reason", "TEXT"],
+  ["updated_at", "TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP"],
+]) {
+  if (!ticketColumns.includes(name)) db.exec(`ALTER TABLE tickets ADD COLUMN ${name} ${definition}`);
+}
+db.exec("CREATE INDEX IF NOT EXISTS idx_tickets_guild_status ON tickets(guild_id, status, id)");
+db.exec("CREATE INDEX IF NOT EXISTS idx_ticket_messages_ticket ON support_ticket_messages(ticket_id, id)");
 
 // Additive migration: keep existing moderation cases while recording timeout duration.
 const moderationColumns = db.prepare("PRAGMA table_info(moderation_cases)").all().map((column) => column.name);
