@@ -108,6 +108,30 @@ db.exec(`
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   );
+  CREATE TABLE IF NOT EXISTS automod_settings (
+    guild_id TEXT PRIMARY KEY,
+    log_channel_id TEXT,
+    mass_mention_limit INTEGER NOT NULL DEFAULT 5 CHECK (mass_mention_limit BETWEEN 3 AND 20),
+    filter_links INTEGER NOT NULL DEFAULT 0 CHECK (filter_links IN (0,1)),
+    filter_invites INTEGER NOT NULL DEFAULT 1 CHECK (filter_invites IN (0,1)),
+    delete_flagged INTEGER NOT NULL DEFAULT 1 CHECK (delete_flagged IN (0,1)),
+    updated_by TEXT,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  );
+  CREATE TABLE IF NOT EXISTS automod_terms (
+    guild_id TEXT NOT NULL,
+    term TEXT NOT NULL,
+    added_by TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (guild_id, term)
+  );
+  CREATE TABLE IF NOT EXISTS automod_exempt_channels (
+    guild_id TEXT NOT NULL,
+    channel_id TEXT NOT NULL,
+    added_by TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (guild_id, channel_id)
+  );
   CREATE INDEX IF NOT EXISTS idx_moderation_cases_guild_created ON moderation_cases(guild_id, created_at);
   CREATE INDEX IF NOT EXISTS idx_admin_audit_guild_id ON admin_audit(guild_id, id);
 `);
@@ -129,6 +153,7 @@ db.exec("CREATE INDEX IF NOT EXISTS idx_tickets_guild_status ON tickets(guild_id
 db.exec("CREATE INDEX IF NOT EXISTS idx_ticket_messages_ticket ON support_ticket_messages(ticket_id, id)");
 db.exec("CREATE INDEX IF NOT EXISTS idx_scheduled_tasks_due ON scheduled_tasks(status, scheduled_at)");
 db.exec("CREATE INDEX IF NOT EXISTS idx_scheduled_tasks_guild ON scheduled_tasks(guild_id, status, scheduled_at)");
+db.exec("CREATE INDEX IF NOT EXISTS idx_automod_terms_guild ON automod_terms(guild_id)");
 
 // Additive migration: keep existing moderation cases while recording timeout duration.
 const moderationColumns = db.prepare("PRAGMA table_info(moderation_cases)").all().map((column) => column.name);
