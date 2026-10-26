@@ -179,7 +179,8 @@ function claimDaily(guildId, userId, now = Date.now()) {
   });
   const result = run();
   if (result.claimed) {
-    recordQuestProgress(guildId, userId, "daily", 1, now);
+    const quest = recordQuestProgress(guildId, userId, "daily", 1, now);
+    result.questReward = quest.reward || 0;
     result.balance = getBalance(guildId, userId).balance;
   }
   return result;
@@ -201,7 +202,8 @@ function buyItem(guildId, userId, itemId, now = Date.now()) {
   });
   const result = run();
   if (result.ok) {
-    recordQuestProgress(guildId, userId, "purchase", 1, now);
+    const quest = recordQuestProgress(guildId, userId, "purchase", 1, now);
+    result.questReward = quest.reward || 0;
     result.balance = getBalance(guildId, userId).balance;
   }
   return result;
