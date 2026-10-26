@@ -20,13 +20,13 @@ function formatDuration(seconds) {
   return hours ? `${hours} ч. ${minutes} мин.` : `${minutes} мин.`;
 }
 
-function progressLine(label, current, required) {
+function progressLine(label, current, required, formatter = (value) => value.toLocaleString("ru-RU")) {
   const value = Math.max(0, Number(current) || 0);
   const target = Math.max(0, Number(required) || 0);
   const percent = target === 0 ? 100 : Math.min(100, Math.floor(value / target * 100));
   const filled = Math.floor(percent / 10);
   const bar = "🟦".repeat(filled) + "⬛".repeat(10 - filled);
-  return `**${label}:** ${bar} ${Math.min(value, target).toLocaleString("ru-RU")} / ${target.toLocaleString("ru-RU")} (${percent}%)`;
+  return `**${label}:** ${bar} ${formatter(Math.min(value, target))} / ${formatter(target)} (${percent}%)`;
 }
 
 module.exports = {
@@ -77,7 +77,7 @@ module.exports = {
       progressLine("На сервере, дней", stats.days, next.days),
       progressLine("Сообщений", stats.messages, next.messages),
       progressLine("Активных дней", stats.activeDays, next.activeDays),
-      progressLine("В голосовых каналах", stats.voiceSeconds, next.voiceSeconds),
+      progressLine("В голосовых каналах", stats.voiceSeconds, next.voiceSeconds, formatDuration),
     ] : [
       "🏆 Ты достиг максимального ранга **LEGEND**!",
     ];
