@@ -77,6 +77,25 @@ db.exec(`
     PRIMARY KEY (guild_id, role_id, section)
   );
   CREATE TABLE IF NOT EXISTS music_settings (guild_id TEXT PRIMARY KEY, enabled INTEGER NOT NULL DEFAULT 1 CHECK(enabled IN (0,1)), voice_channel_id TEXT, volume INTEGER NOT NULL DEFAULT 50 CHECK(volume BETWEEN 0 AND 100), repeat_mode TEXT NOT NULL DEFAULT 'off' CHECK(repeat_mode IN ('off','track','queue')), updated_by TEXT, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+  CREATE TABLE IF NOT EXISTS music_playlists (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    guild_id TEXT NOT NULL,
+    owner_id TEXT NOT NULL,
+    name TEXT NOT NULL COLLATE NOCASE,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(guild_id, owner_id, name)
+  );
+  CREATE TABLE IF NOT EXISTS music_playlist_tracks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    playlist_id INTEGER NOT NULL REFERENCES music_playlists(id) ON DELETE CASCADE,
+    title TEXT NOT NULL,
+    url TEXT NOT NULL,
+    source TEXT NOT NULL,
+    duration_seconds INTEGER NOT NULL DEFAULT 0,
+    added_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  );
+  CREATE INDEX IF NOT EXISTS idx_music_playlists_owner ON music_playlists(guild_id, owner_id, name);
+  CREATE INDEX IF NOT EXISTS idx_music_playlist_tracks_order ON music_playlist_tracks(playlist_id, id);
   CREATE TABLE IF NOT EXISTS guild_features (
     guild_id TEXT NOT NULL,
     feature_key TEXT NOT NULL,
@@ -137,7 +156,6 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_admin_audit_guild_id ON admin_audit(guild_id, id);
 `);
 
-// Additive migrations: preserve existing ticket records and extend them in place.
 const ticketColumns = db.prepare("PRAGMA table_info(tickets)").all().map((column) => column.name);
 for (const [name, definition] of [
   ["category", "TEXT NOT NULL DEFAULT 'general'"],
@@ -155,14 +173,8 @@ db.exec("CREATE INDEX IF NOT EXISTS idx_ticket_messages_ticket ON support_ticket
 db.exec("CREATE INDEX IF NOT EXISTS idx_scheduled_tasks_due ON scheduled_tasks(status, scheduled_at)");
 db.exec("CREATE INDEX IF NOT EXISTS idx_scheduled_tasks_guild ON scheduled_tasks(guild_id, status, scheduled_at)");
 db.exec("CREATE INDEX IF NOT EXISTS idx_automod_terms_guild ON automod_terms(guild_id)");
-
-// Additive migration: keep existing moderation cases while recording timeout duration.
 const moderationColumns = db.prepare("PRAGMA table_info(moderation_cases)").all().map((column) => column.name);
-if (!moderationColumns.includes("duration_minutes")) {
-  db.exec("ALTER TABLE moderation_cases ADD COLUMN duration_minutes INTEGER");
-}
-
-/* Additive economy migration: old member rows and XP are preserved. */
+if (!moderationColumns.includes("duration_minutes")) db.exec("ALTER TABLE moderation_cases ADD COLUMN duration_minutes INTEGER");
 const memberStatsColumns = db.prepare("PRAGMA table_info(member_stats)").all().map((column) => column.name);
 for (const [name, definition] of [
   ["xp", "INTEGER NOT NULL DEFAULT 0"],
@@ -171,9 +183,7 @@ for (const [name, definition] of [
   ["last_xp_at", "INTEGER NOT NULL DEFAULT 0"],
   ["last_daily_at", "INTEGER NOT NULL DEFAULT 0"],
 ]) {
-  if (!memberStatsColumns.includes(name)) {
-    db.exec(`ALTER TABLE member_stats ADD COLUMN ${name} ${definition}`);
-  }
+  if (!memberStatsColumns.includes(name)) db.exec(`ALTER TABLE member_stats ADD COLUMN ${name} ${definition}`);
 }
 
 logger.info(`SQLite database ready at ${filename}`);
