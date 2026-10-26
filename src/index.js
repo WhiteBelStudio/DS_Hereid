@@ -250,7 +250,7 @@ client.on(Events.MessageCreate, async (message) => {
     await tickets.recordMessage(message);
     await moderateMessage(message);
     const result = addMessageXp(message.guild.id, message.author.id, Date.now(), message.content);
-    if (result.awarded) recordQuestProgress(message.guild.id, message.author.id, "messages", 1, Date.now());
+    if (result.awarded && isFeatureEnabled(message.guild.id, "economy")) recordQuestProgress(message.guild.id, message.author.id, "messages", 1, Date.now());
     const member = message.member || await message.guild.members.fetch(message.author.id).catch(() => null);
     if (member) {
       recordMessage(member, message.content);
