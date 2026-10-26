@@ -11,6 +11,7 @@ process.env.LOG_LEVEL = "error";
 const db = require("../src/database");
 const economy = require("../src/economy");
 const transactionsCommand = require("../src/commands/transactions");
+const questsCommand = require("../src/commands/quests");
 const guild = process.env.GUILD_ID;
 const user = "12345678901234569";
 let passed = 0;
@@ -97,6 +98,11 @@ try {
     assert.ok(rows.some(row => row.kind === "purchase"));
     assert.ok(rows.some(row => row.kind === "daily"));
     assert.ok(rows.some(row => row.kind === "quest"));
+  });
+  test("daily quests command is registered with expected name", () => {
+    assert.equal(questsCommand.data.toJSON().name, "quests");
+    assert.equal(typeof questsCommand.execute, "function");
+    assert.equal(economy.DAILY_QUESTS.length, 3);
   });
   test("transaction history slash command is registered with expected name", () => {
     assert.equal(transactionsCommand.data.toJSON().name, "transactions");
