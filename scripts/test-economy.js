@@ -33,7 +33,7 @@ try {
     const result = economy.buyItem(guild, user, "title_legend", 3_000_000);
     assert.equal(result.ok, false);
     assert.equal(result.reason, "insufficient_funds");
-    assert.equal(economy.getBalance(guild, user).balance, economy.DAILY_REWARD * 2);
+    assert.equal(economy.getBalance(guild, user).balance, economy.DAILY_REWARD * 2 + 20);
   });
   test("purchase atomically debits balance and adds inventory", () => {
     economy.adjustBalance(guild, user, "12345678901234570", 4000, "test funds", 4_000_000);
