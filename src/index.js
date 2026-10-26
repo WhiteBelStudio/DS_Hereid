@@ -10,6 +10,7 @@ const { isFeatureEnabled } = require("./features");
 const { addMessageXp } = require("./member-profile");
 const { ensureMember, recordMessage, recordVoiceState, evaluateMember, evaluateGuild } = require("./rank-system");
 const { evaluateAchievements } = require("./achievements");
+const tickets = require("./tickets");
 
 const client = new Client({
   intents: [
@@ -138,6 +139,20 @@ client.on(Events.InteractionCreate, async (interaction) => {
       return;
     }
 
+    if ((interaction.isButton() || interaction.isModalSubmit()) &&
+        interaction.customId?.startsWith("tk:")) {
+      if (interaction.isModalSubmit()) await tickets.handleModal(interaction);
+      else await tickets.handle(interaction);
+      if (!interaction.replied && !interaction.deferred && !interaction.isModalSubmit()) {
+        logger.warn(`Unacknowledged ticket component interaction: ${interaction.customId}`);
+        await interaction.reply({
+          content: "⚠️ Действие тикета не было обработано. Открой /ticket или /tickets заново.",
+          flags: MessageFlags.Ephemeral,
+        });
+      }
+      return;
+    }
+
     if (adminPanel &&
         (interaction.isButton() || interaction.isStringSelectMenu() || interaction.isModalSubmit()) &&
         interaction.customId?.startsWith("ha:")) {
@@ -228,6 +243,7 @@ client.on(Events.MessageCreate, async (message) => {
   if (!message.guild || message.author.bot || !message.content.trim()) return;
 
   try {
+    await tickets.recordMessage(message);
     const result = addMessageXp(message.guild.id, message.author.id, Date.now(), message.content);
     const member = message.member || await message.guild.members.fetch(message.author.id).catch(() => null);
     if (member) {
