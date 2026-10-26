@@ -6,6 +6,7 @@ const KIND_LABELS = {
   daily: "🎁 Ежедневная награда",
   purchase: "🛍️ Покупка",
   admin_adjustment: "🛡️ Корректировка администратора",
+  quest: "📜 Награда за задание",
 };
 
 function formatDate(timestamp) {
