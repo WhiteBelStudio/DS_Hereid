@@ -10,6 +10,7 @@ const { isFeatureEnabled } = require("./features");
 const { addMessageXp } = require("./member-profile");
 const { ensureMember, recordMessage, recordVoiceState, evaluateMember, evaluateGuild } = require("./rank-system");
 const { evaluateAchievements } = require("./achievements");
+const { recordQuestProgress } = require("./economy");
 const tickets = require("./tickets");
 const { moderateMessage } = require("./automod");
 const { startAutomationScheduler, stopAutomationScheduler } = require("./automation");
@@ -249,6 +250,7 @@ client.on(Events.MessageCreate, async (message) => {
     await tickets.recordMessage(message);
     await moderateMessage(message);
     const result = addMessageXp(message.guild.id, message.author.id, Date.now(), message.content);
+    if (result.awarded) recordQuestProgress(message.guild.id, message.author.id, "messages", 1, Date.now());
     const member = message.member || await message.guild.members.fetch(message.author.id).catch(() => null);
     if (member) {
       recordMessage(member, message.content);
