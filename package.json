@@ -9,10 +9,14 @@
     "check": "node scripts/check.js",
     "test": "node scripts/test-settings.js && node scripts/test-features.js && node scripts/test-member-profile.js && node scripts/test-rank-system.js && node scripts/test-economy.js && node scripts/test-achievements.js && node scripts/test-automod.js"
   },
-  "engines": { "node": ">=22.0.0" },
+  "engines": {
+    "node": ">=22.0.0"
+  },
   "dependencies": {
     "better-sqlite3": "^11.8.1",
     "discord.js": "^14.19.3",
-    "dotenv": "^16.4.7"
+    "dotenv": "^16.4.7",
+    "@discordjs/voice": "^0.19.0",
+    "play-dl": "^1.9.7"
   }
 }
