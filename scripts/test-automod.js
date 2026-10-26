@@ -45,7 +45,7 @@ try {
   setFeatureEnabled(guildId, "automod", true, actorId);
   test("blocked word matches whole words without matching inside longer words", () => {
     db.prepare("INSERT INTO automod_terms (guild_id, term, added_by) VALUES (?, ?, ?)").run(guildId, "запрещено", actorId);
-    assert.equal(checkMessage(message("Это запрещено")), null === checkMessage(message("Это запрещено")) ? null : null);
+    assert.equal(checkMessage(message("Это запрещено")).kind, "blocked_word");
   });
   test("blocked word triggers only on a whole-word match", () => {
     const result = checkMessage(message("Это запрещено здесь"));
