@@ -20,14 +20,14 @@ try {
     const first = economy.claimDaily(guild, user, 1_000_000);
     assert.equal(first.claimed, true);
     assert.equal(first.reward, economy.DAILY_REWARD);
-    assert.equal(first.balance, economy.DAILY_REWARD);
+    assert.equal(first.balance, economy.DAILY_REWARD + 10);
     const second = economy.claimDaily(guild, user, 1_000_000 + economy.DAILY_COOLDOWN_MS - 1);
     assert.equal(second.claimed, false);
-    assert.equal(second.balance, economy.DAILY_REWARD);
+    assert.equal(second.balance, economy.DAILY_REWARD + 10);
     assert.equal(second.remainingMs, 1);
     const third = economy.claimDaily(guild, user, 1_000_000 + economy.DAILY_COOLDOWN_MS);
     assert.equal(third.claimed, true);
-    assert.equal(third.balance, economy.DAILY_REWARD * 2);
+    assert.equal(third.balance, economy.DAILY_REWARD * 2 + 20);
   });
   test("purchase rejects insufficient funds without changing balance", () => {
     const result = economy.buyItem(guild, user, "title_legend", 3_000_000);
@@ -40,7 +40,7 @@ try {
     const before = economy.getBalance(guild, user).balance;
     const result = economy.buyItem(guild, user, "title_legend", 4_000_001);
     assert.equal(result.ok, true);
-    assert.equal(result.balance, before - 1500);
+    assert.equal(result.balance, before - 1500 + 20);
     assert.equal(economy.getInventory(guild, user).some(row => row.item_id === "title_legend"), true);
   });
   test("duplicate purchases are rejected without another debit", () => {
@@ -67,6 +67,28 @@ try {
     assert.ok(logs.some(row => row.kind === "purchase"));
     assert.ok(logs.some(row => row.kind === "daily"));
   });
+  test("daily quests award once and never exceed their target", () => {
+    const questUser = "12345678901234571";
+    const now = 1_000_000;
+    for (let i = 0; i < 4; i++) {
+      const progress = economy.recordQuestProgress(guild, questUser, "messages", 1, now + i);
+      assert.equal(progress.completed, false);
+    }
+    const completed = economy.recordQuestProgress(guild, questUser, "messages", 1, now + 5);
+    assert.equal(completed.newlyCompleted, true);
+    assert.equal(completed.reward, 25);
+    const repeated = economy.recordQuestProgress(guild, questUser, "messages", 1, now + 6);
+    assert.equal(repeated.newlyCompleted, false);
+    assert.equal(repeated.reward, 0);
+    assert.equal(repeated.balance, 25);
+    assert.equal(economy.getDailyQuests(guild, questUser, now).find(task => task.key === "messages").completed, true);
+  });
+  test("daily quest progress resets on Moscow calendar day", () => {
+    const questUser = "12345678901234572";
+    economy.recordQuestProgress(guild, questUser, "messages", 2, 1_000_000);
+    const nextDay = economy.getDailyQuests(guild, questUser, 1_000_000 + 24 * 60 * 60 * 1000);
+    assert.equal(nextDay.find(task => task.key === "messages").progress, 0);
+  });
   test("transaction history returns newest operations and bounded result count", () => {
     const rows = economy.getTransactions(guild, user, 10);
     assert.ok(rows.length > 0);
@@ -74,6 +96,7 @@ try {
     assert.ok(rows.some(row => row.kind === "admin_adjustment"));
     assert.ok(rows.some(row => row.kind === "purchase"));
     assert.ok(rows.some(row => row.kind === "daily"));
+    assert.ok(rows.some(row => row.kind === "quest"));
   });
   test("transaction history slash command is registered with expected name", () => {
     assert.equal(transactionsCommand.data.toJSON().name, "transactions");
