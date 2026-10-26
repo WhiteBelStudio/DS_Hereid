@@ -34,24 +34,87 @@ async function searchTracks(query) {
     const v = info.video_details;
     return [{ title: titleOf(v), url: v.url || q, durationInSec: Number(v.durationInSec) || 0, source: "YouTube" }];
   }
-  const found = [];
   const providers = [
     ["YouTube", () => play.search(q, { limit: 5, source: { youtube: "video" } })],
     ["SoundCloud", () => play.search(q, { limit: 5, source: { soundcloud: "tracks" } })],
   ];
-  for (const [source, search] of providers) {
+  // Run providers concurrently so one slow source does not delay the other.
+  const batches = await Promise.all(providers.map(async ([source, search]) => {
     try {
       const results = await search();
-      for (const item of results || []) {
+      return (results || []).map((item) => {
         const url = item.url || item.permalink;
-        if (!url || !/^https?:\/\//i.test(url) || found.some((x) => x.url === url)) continue;
-        found.push({ title: titleOf(item), url, durationInSec: Number(item.durationInSec || item.duration) || 0, source });
-      }
-    } catch (_) {
-      // Continue if a provider is unavailable; another provider may still return results.
-    }
+        if (!url || !/^https?:\\/\\//i.test(url)) return null;
+        return { title: titleOf(item), url, durationInSec: Number(item.durationInSec || item.duration) || 0, source };
+      }).filter(Boolean);
+    } catch (_) { return []; }
+  }));
+  const found = [];
+  for (const track of batches.flat()) if (!found.some((item) => item.url === track.url)) found.push(track);
+  return found.slice(0, 10);
+}
+
+// Personal playlists are persisted in SQLite.
+function listPlaylists(guildId, ownerId) {
+  return db.prepare(`SELECT p.id, p.name, p.created_at, COUNT(t.id) AS track_count FROM music_playlists p LEFT JOIN music_playlist_tracks t ON t.playlist_id=p.id WHERE p.guild_id=? AND p.owner_id=? GROUP BY p.id ORDER BY p.name COLLATE NOCASE`).all(guildId, ownerId);
+}
+function getPlaylist(guildId, ownerId, name) {
+  return db.prepare("SELECT * FROM music_playlists WHERE guild_id=? AND owner_id=? AND name=? COLLATE NOCASE").get(guildId, ownerId, name);
+}
+function createPlaylist(guildId, ownerId, name) {
+  const normalized = String(name || "").trim().replace(/\\s+/g, " ");
+  if (normalized.length < 1 || normalized.length > 50) throw new Error("Название плейлиста должно быть от 1 до 50 символов.");
+  try {
+    const result = db.prepare("INSERT INTO music_playlists (guild_id, owner_id, name) VALUES (?, ?, ?)").run(guildId, ownerId, normalized);
+    return db.prepare("SELECT * FROM music_playlists WHERE id=?").get(result.lastInsertRowid);
+  } catch (error) {
+    if (String(error.message).includes("UNIQUE")) throw new Error("У тебя уже есть плейлист с таким названием.");
+    throw error;
   }
-  return found.slice(0, 8);
+}
+function addPlaylistTrack(guildId, ownerId, playlistName, track) {
+  const playlist = getPlaylist(guildId, ownerId, playlistName);
+  if (!playlist) throw new Error("Плейлист не найден. Сначала создай его командой /music playlist-create.");
+  const count = db.prepare("SELECT COUNT(*) AS n FROM music_playlist_tracks WHERE playlist_id=?").get(playlist.id).n;
+  if (count >= 200) throw new Error("В одном плейлисте максимум 200 треков.");
+  const result = db.prepare("INSERT INTO music_playlist_tracks (playlist_id, title, url, source, duration_seconds) VALUES (?, ?, ?, ?, ?)").run(playlist.id, titleOf(track), track.url, track.source, Number(track.durationInSec) || 0);
+  return { playlist, trackId: Number(result.lastInsertRowid), count: count + 1 };
+}
+function getPlaylistTracks(playlistId) {
+  return db.prepare("SELECT id, title, url, source, duration_seconds AS durationInSec FROM music_playlist_tracks WHERE playlist_id=? ORDER BY id").all(playlistId);
+}
+function removePlaylistTrack(guildId, ownerId, playlistName, position) {
+  const playlist = getPlaylist(guildId, ownerId, playlistName);
+  if (!playlist) throw new Error("Плейлист не найден.");
+  const tracks = getPlaylistTracks(playlist.id);
+  const index = Number(position) - 1;
+  if (!Number.isInteger(index) || index < 0 || index >= tracks.length) throw new Error("Укажи номер трека из списка плейлиста.");
+  db.prepare("DELETE FROM music_playlist_tracks WHERE id=?").run(tracks[index].id);
+  return { playlist, removed: tracks[index], remaining: tracks.length - 1 };
+}
+function deletePlaylist(guildId, ownerId, playlistName) {
+  const playlist = getPlaylist(guildId, ownerId, playlistName);
+  if (!playlist) throw new Error("Плейлист не найден.");
+  db.prepare("DELETE FROM music_playlists WHERE id=?").run(playlist.id);
+  return playlist;
+}
+function queuePlaylist(interaction, tracks) {
+  if (!tracks.length) throw new Error("В этом плейлисте пока нет треков.");
+  const settings = getMusicSettings(interaction.guildId);
+  if (!settings.enabled) throw new Error("Музыкальный плеер отключён администратором в панели /admin.");
+  const voiceChannel = interaction.member && interaction.member.voice && interaction.member.voice.channel;
+  if (!voiceChannel) throw new Error("Сначала зайди в голосовой канал.");
+  if (settings.voice_channel_id && voiceChannel.id !== settings.voice_channel_id) throw new Error("Музыка разрешена только в канале <#" + settings.voice_channel_id + ">.");
+  const permissions = voiceChannel.permissionsFor(interaction.guild.members.me);
+  if (!permissions || !permissions.has(["Connect", "Speak"])) throw new Error("Мне нужны права «Подключаться» и «Говорить» в этом голосовом канале.");
+  const session = ensureSession(interaction.guild, voiceChannel);
+  session.volume = Number(settings.volume ?? 50);
+  session.repeat = settings.repeat_mode || "off";
+  session.textChannelId = interaction.channelId;
+  if (tracks.length + session.queue.length > MAX_QUEUE) throw new Error("В очереди максимум " + MAX_QUEUE + " треков; сначала освободи место.");
+  session.queue.push(...tracks.map((track) => ({ ...track, requestedBy: interaction.user.id })));
+  if (!session.current && session.player.state.status === AudioPlayerStatus.Idle && !session.busy) void playNext(interaction.guildId);
+  return { session, added: tracks.length };
 }
 
 function makeNowPlayingEmbed(session) {
@@ -217,4 +280,4 @@ function stopSession(guildId) {
   return true;
 }
 
-module.exports = { AudioPlayerStatus, formatTime, getSession, searchTracks, makeNowPlayingEmbed, makeSearchRows, enqueue, handleButton, stopSession, searches, getMusicSettings, ensureMusicSettings };
+module.exports = { AudioPlayerStatus, formatTime, getSession, searchTracks, makeNowPlayingEmbed, makeSearchRows, enqueue, handleButton, stopSession, searches, getMusicSettings, ensureMusicSettings, listPlaylists, getPlaylist, createPlaylist, addPlaylistTrack, getPlaylistTracks, removePlaylistTrack, deletePlaylist, queuePlaylist };
