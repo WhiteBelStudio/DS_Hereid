@@ -57,6 +57,22 @@ try {
     assert.ok(unlocked.some((item) => item.id === "level_5"));
   });
 
+  test("voice achievements unlock after recorded voice time", () => {
+    const { recordVoiceState } = require("../src/rank-system");
+    const voiceMember = {
+      guild: { id: guildId },
+      id: "12345678901234571",
+      user: { bot: false },
+      joinedTimestamp: Date.now() - 40 * 86400000,
+    };
+    const start = Date.now();
+    recordVoiceState(voiceMember, false, true, start, { wasAfk: false, isAfk: false });
+    recordVoiceState(voiceMember, true, false, start + 3600000, { wasAfk: false, isAfk: false });
+    const unlocked = evaluateAchievements(guildId, voiceMember.id);
+    assert.ok(unlocked.some((item) => item.id === "voice_1h"));
+    assert.deepEqual(evaluateAchievements(guildId, voiceMember.id), []);
+  });
+
   test("achievement records survive database close and reopen", () => {
     const countBefore = db.prepare("SELECT COUNT(*) AS count FROM member_achievements WHERE guild_id=? AND user_id=?").get(guildId, userId).count;
     assert.ok(countBefore >= 3);
