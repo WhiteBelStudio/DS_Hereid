@@ -1,6 +1,6 @@
 const db = require("./database");
 
-const DAILY_REWARD = 15;
+const DAILY_REWARD = 100;
 const DAILY_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 const DAILY_QUESTS = Object.freeze([
   { key: "messages", name: "Активное общение", description: "Получи XP за 5 подходящих сообщений", target: 5, reward: 25 },
