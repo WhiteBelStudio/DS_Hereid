@@ -39,53 +39,65 @@ module.exports = {
     const level = levelForXp(profile.xp);
     const next = 100 * (level + 1) ** 2;
     const base = 100 * level ** 2;
-    const progress = Math.max(0, profile.xp - base);
+    const progress = Math.max(0, Number(profile.xp) - base);
     const needed = Math.max(1, next - base);
     const percent = Math.min(100, Math.floor((progress / needed) * 100));
     const filled = Math.min(12, Math.floor((progress / needed) * 12));
-    const bar = "🟦".repeat(filled) + "⬛".repeat(12 - filled);
+    const bar = "🟪".repeat(filled) + "⬛".repeat(12 - filled);
     const color = custom.color ? Number.parseInt(custom.color.value, 16) : 0x5865f2;
     const frame = custom.frame ? FRAME_STYLE[custom.frame.value] : null;
     const badge = custom.badge?.value || "🌱";
     const title = custom.title?.value || "Участник сообщества";
     const displayName = member?.displayName || user.globalName || user.username;
+    const xp = Number(profile.xp || 0);
+    const balance = Number(profile.balance || 0);
 
     const embed = new EmbedBuilder()
       .setColor(Number.isFinite(color) ? color : 0x5865f2)
       .setAuthor({
-        name: `${badge} ${displayName} • Профиль HeradeLegend`,
+        name: `${badge} ${displayName}  •  HERADELEGEND`,
         iconURL: user.displayAvatarURL({ size: 128 }),
       })
-      .setThumbnail(user.displayAvatarURL({ size: 256 }))
-      .setTitle(`${frame ? frame.emoji + " " : "✨ "}${title}`)
+      .setThumbnail(user.displayAvatarURL({ size: 512 }))
+      .setTitle(`${frame ? frame.emoji : "✨"}  ${title}`)
       .setDescription([
-        member ? `**Участник:** ${member}` : `**Статус:** не состоит на сервере`,
-        frame ? `**Оформление:** ${frame.emoji} Рамка «${frame.label}»` : "**Оформление:** стандартное",
+        member ? `👤 **Участник:** ${member}` : "⚪ **Статус:** не состоит на сервере",
+        frame ? `🎨 **Тема профиля:** ${frame.emoji} ${frame.label}` : "🎨 **Тема профиля:** классическая",
         "",
-        `**${bar}** ${percent}%`,
-        `До уровня **${level + 1}**: **${progress.toLocaleString("ru-RU")} / ${needed.toLocaleString("ru-RU")} XP**`,
+        "━━━━━━━━━━━━━━━━━━━━",
+        `**ПРОГРЕСС ДО УРОВНЯ ${level + 1}**`,
+        `${bar} **${percent}%**`,
+        `${progress.toLocaleString("ru-RU")} / ${needed.toLocaleString("ru-RU")} XP до следующего уровня`,
       ].join("\n"))
       .addFields(
-        { name: "🏆 Уровень", value: `**${level}**`, inline: true },
-        { name: "✨ Опыт", value: `**${Number(profile.xp).toLocaleString("ru-RU")} XP**`, inline: true },
-        { name: "🪙 Баланс", value: `**${Number(profile.balance).toLocaleString("ru-RU")}**`, inline: true },
+        { name: "🏆 УРОВЕНЬ", value: `**${level}**`, inline: true },
+        { name: "✨ ОПЫТ", value: `**${xp.toLocaleString("ru-RU")} XP**`, inline: true },
+        { name: "🪙 БАЛАНС", value: `**${balance.toLocaleString("ru-RU")}**`, inline: true },
         {
-          name: "🎨 Мой стиль",
+          name: "🪄 МОЁ ОФОРМЛЕНИЕ",
           value: [
-            `**Титул:** ${custom.title?.value || "не выбран"}`,
-            `**Значок:** ${custom.badge?.value || "не выбран"}`,
-            `**Рамка:** ${custom.frame?.value || "не выбрана"}`,
-            `**Цвет:** ${custom.color?.name || "стандартный"}`,
+            `**Титул:** ${custom.title?.value || "—"}`,
+            `**Значок:** ${custom.badge?.value || "—"}`,
+            `**Рамка:** ${custom.frame?.value || "—"}`,
+            `**Цвет:** ${custom.color?.name || "Стандартный"}`,
           ].join("\n"),
           inline: true,
         },
         {
-          name: "🎒 Коллекция",
-          value: `Предметов: **${inventory.length}**\n${inventory.length ? "Оформление можно менять в любой момент." : "Загляни в магазин и собери свой стиль!"}`,
+          name: "🎒 КОЛЛЕКЦИЯ",
+          value: [
+            `Предметов собрано: **${inventory.length}**`,
+            inventory.length ? "Меняй стиль когда захочешь." : "Собери свой уникальный стиль в магазине.",
+          ].join("\n"),
           inline: true,
         },
+        {
+          name: "🛍️ КАК ИЗМЕНИТЬ СТИЛЬ",
+          value: "Покупай предметы в **/shop**, смотри коллекцию в **/inventory**, применяй через **/equip**.",
+          inline: false,
+        },
       )
-      .setFooter({ text: "HeradeLegend • /shop — купить • /inventory — коллекция • /equip — применить" })
+      .setFooter({ text: "HeradeLegend • Твой профиль, твой стиль" })
       .setTimestamp();
 
     await interaction.reply({ embeds: [embed] });
