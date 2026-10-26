@@ -164,7 +164,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
     }
 
     if (adminPanel &&
-        (interaction.isButton() || interaction.isStringSelectMenu() || interaction.isModalSubmit()) &&
+        (interaction.isButton() || interaction.isStringSelectMenu() || interaction.isChannelSelectMenu() || interaction.isModalSubmit()) &&
         interaction.customId?.startsWith("ha:")) {
       await adminPanel.handle(interaction);
       // Protect against stale/unknown component IDs that a handler may not
