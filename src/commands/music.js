@@ -82,6 +82,7 @@ module.exports = {
         await interaction.reply({ content: "▶️ Воспроизведение продолжено.", flags: MessageFlags.Ephemeral });
       } else if (sub === "skip") {
         if (!session.current) throw new Error("Сейчас нет трека для пропуска.");
+        session.current = null;
         session.player.stop(true);
         await interaction.reply({ content: "⏭️ Трек пропущен.", flags: MessageFlags.Ephemeral });
       } else if (sub === "stop") {
