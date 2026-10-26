@@ -13,6 +13,7 @@ const { evaluateAchievements } = require("./achievements");
 const { recordQuestProgress } = require("./economy");
 const tickets = require("./tickets");
 const { moderateMessage } = require("./automod");
+const music = require("./music");
 const { startAutomationScheduler, stopAutomationScheduler } = require("./automation");
 
 const client = new Client({
@@ -141,6 +142,11 @@ client.on(Events.InteractionCreate, async (interaction) => {
         });
       }
       return;
+    }
+
+    if (interaction.isButton() && interaction.customId?.startsWith("music:")) {
+      const handled = await music.handleButton(interaction);
+      if (handled) return;
     }
 
     if ((interaction.isButton() || interaction.isModalSubmit()) &&
@@ -313,6 +319,7 @@ async function shutdown(signal) {
 
   try {
     stopAutomationScheduler();
+    for (const guildId of client.guilds.cache.keys()) music.stopSession(guildId);
     client.destroy();
     if (db.open) db.close();
     logger.info("Discord client and database closed.");
