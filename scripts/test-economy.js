@@ -10,6 +10,7 @@ process.env.GUILD_ID = "12345678901234568";
 process.env.LOG_LEVEL = "error";
 const db = require("../src/database");
 const economy = require("../src/economy");
+const transactionsCommand = require("../src/commands/transactions");
 const guild = process.env.GUILD_ID;
 const user = "12345678901234569";
 let passed = 0;
@@ -65,6 +66,18 @@ try {
     const logs = economy.getTransactions(guild, user, 25);
     assert.ok(logs.some(row => row.kind === "purchase"));
     assert.ok(logs.some(row => row.kind === "daily"));
+  });
+  test("transaction history returns newest operations and bounded result count", () => {
+    const rows = economy.getTransactions(guild, user, 10);
+    assert.ok(rows.length > 0);
+    assert.ok(rows.length <= 10);
+    assert.ok(rows.some(row => row.kind === "admin_adjustment"));
+    assert.ok(rows.some(row => row.kind === "purchase"));
+    assert.ok(rows.some(row => row.kind === "daily"));
+  });
+  test("transaction history slash command is registered with expected name", () => {
+    assert.equal(transactionsCommand.data.toJSON().name, "transactions");
+    assert.equal(typeof transactionsCommand.execute, "function");
   });
   test("economy preserves existing member XP and balance schema", () => {
     const row = db.prepare("SELECT balance FROM member_stats WHERE guild_id=? AND user_id=?").get(guild,user);
