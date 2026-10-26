@@ -58,7 +58,7 @@ module.exports = {
         "`/music now` и `/music queue` — текущий трек и очередь.",
         "`/music pause`, `/music resume`, `/music skip`, `/music stop` — управление.",
         "`/music volume percent:<0–100>` и `/music repeat mode:<режим>` — громкость и повтор."
-      ].join("\\n")
+      ].join("\n")
     });
 
     if (adminView) {
