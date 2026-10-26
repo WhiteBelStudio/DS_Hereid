@@ -47,12 +47,13 @@ function panelInteraction(customId) {
 async function main() {
   await test("feature registry contains only supported toggles", async () => {
     assert.deepEqual(Object.keys(FEATURES), [
-      "welcome_messages", "goodbye_messages", "autorole", "spam_detection", "moderation", "economy",
+      "welcome_messages", "goodbye_messages", "autorole", "spam_detection", "automod", "moderation", "economy",
     ]);
   });
-  await test("legacy guild defaults preserve currently enabled behavior", async () => {
+  await test("legacy guild defaults preserve behavior while new automod starts disabled", async () => {
     assert.equal(isFeatureEnabled(guildId, "welcome_messages"), true);
     assert.equal(isFeatureEnabled(guildId, "moderation"), true);
+    assert.equal(isFeatureEnabled(guildId, "automod"), false);
   });
   await test("feature toggle persists enabled state and records actor", async () => {
     assert.equal(setFeatureEnabled(guildId, "spam_detection", false, actorId), false);
@@ -70,7 +71,7 @@ async function main() {
   });
   await test("feature listing returns state for every supported feature", async () => {
     const list = listFeatures(guildId);
-    assert.equal(list.length, 6);
+    assert.equal(list.length, 7);
     assert.ok(list.every((entry) => typeof entry.enabled === "boolean" && entry.label && entry.description));
   });
   await test("admin panel toggle persists state and writes audit", async () => {
@@ -93,7 +94,7 @@ async function main() {
   await test("feature panel lists all switches", async () => {
     const ctx = panelInteraction("ha:features");
     assert.equal(await admin.handle(ctx), true);
-    assert.ok(ctx.lastUpdate.embeds[0].data.fields.length === 6);
+    assert.ok(ctx.lastUpdate.embeds[0].data.fields.length === 7);
     assert.ok(ctx.lastUpdate.components.some((row) => row.components.some((button) => button.data.custom_id === "ha:feature:toggle:moderation" && button.data.disabled === false)));
     assert.ok(ctx.lastUpdate.components.every((row) => row.components.every((button) => button.data.disabled === false)));
   });
