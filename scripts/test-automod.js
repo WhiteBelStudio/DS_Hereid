@@ -55,7 +55,7 @@ try {
   test("mass mention limit is configurable", () => {
     db.prepare("INSERT INTO automod_settings (guild_id, mass_mention_limit) VALUES (?, 3)").run(guildId);
     assert.equal(checkMessage(message("mentions", { users: 2, roles: 1 })).kind, "mass_mentions");
-    assert.equal(checkMessage(message("mentions", { users: 2 })).kind, undefined);
+    assert.equal(checkMessage(message("mentions", { users: 2 })), null);
   });
   test("Discord invites are filtered by default when automod is enabled", () => {
     assert.equal(checkMessage(message("join https://discord.gg/example")).kind, "discord_invite");
