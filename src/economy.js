@@ -2,6 +2,11 @@ const db = require("./database");
 
 const DAILY_REWARD = 15;
 const DAILY_COOLDOWN_MS = 24 * 60 * 60 * 1000;
+const DAILY_QUESTS = Object.freeze([
+  { key: "messages", name: "Активное общение", description: "Получи XP за 5 подходящих сообщений", target: 5, reward: 25 },
+  { key: "daily", name: "Забери ежедневную награду", description: "Используй /daily", target: 1, reward: 10 },
+  { key: "purchase", name: "Первая покупка дня", description: "Купи любой предмет в /shop", target: 1, reward: 20 },
+]);
 const CATALOG = Object.freeze([
   // Титулы
   { id: "title_newcomer", name: "Титул «Новичок»", category: "Титулы", description: "Небольшой титул для профиля.", price: 150, type: "title", value: "Новичок" },
@@ -75,12 +80,85 @@ db.exec(`
     PRIMARY KEY (guild_id, user_id)
   );
   CREATE INDEX IF NOT EXISTS idx_economy_transactions_member ON economy_transactions(guild_id, user_id, id DESC);
+  CREATE TABLE IF NOT EXISTS economy_daily_quests (
+    guild_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    day_key TEXT NOT NULL,
+    task_key TEXT NOT NULL,
+    progress INTEGER NOT NULL DEFAULT 0 CHECK (progress >= 0),
+    completed_at INTEGER,
+    PRIMARY KEY (guild_id, user_id, day_key, task_key)
+  );
+  CREATE INDEX IF NOT EXISTS idx_economy_daily_quests_member ON economy_daily_quests(guild_id, user_id, day_key);
 `);
 
 const itemById = new Map(CATALOG.map((item) => [item.id, item]));
 const ensureMember = db.prepare("INSERT INTO member_stats (guild_id,user_id) VALUES (?,?) ON CONFLICT(guild_id,user_id) DO NOTHING");
 const getBalanceStatement = db.prepare("SELECT balance, last_daily_at FROM member_stats WHERE guild_id=? AND user_id=?");
 const logTransaction = db.prepare("INSERT INTO economy_transactions (guild_id,user_id,actor_id,amount,kind,details,created_at) VALUES (?,?,?,?,?,?,?)");
+
+function moscowDayKey(now = Date.now()) {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/Moscow", year: "numeric", month: "2-digit", day: "2-digit",
+  }).formatToParts(new Date(now));
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
+function getDailyQuests(guildId, userId, now = Date.now()) {
+  const dayKey = moscowDayKey(now);
+  const run = db.transaction(() => {
+    ensureMember.run(guildId, userId);
+    const insert = db.prepare(
+      "INSERT INTO economy_daily_quests (guild_id,user_id,day_key,task_key,progress) VALUES (?,?,?,?,0) ON CONFLICT(guild_id,user_id,day_key,task_key) DO NOTHING",
+    );
+    for (const task of DAILY_QUESTS) insert.run(guildId, userId, dayKey, task.key);
+    const select = db.prepare(
+      "SELECT progress, completed_at FROM economy_daily_quests WHERE guild_id=? AND user_id=? AND day_key=? AND task_key=?",
+    );
+    return DAILY_QUESTS.map((task) => {
+      const row = select.get(guildId, userId, dayKey, task.key);
+      return { ...task, progress: Math.min(task.target, Number(row?.progress || 0)), completed: Boolean(row?.completed_at) };
+    });
+  });
+  return run();
+}
+
+function recordQuestProgress(guildId, userId, taskKey, amount = 1, now = Date.now()) {
+  const task = DAILY_QUESTS.find((entry) => entry.key === taskKey);
+  if (!task || !Number.isSafeInteger(amount) || amount < 1) {
+    return { ok: false, reason: "invalid_task_or_amount" };
+  }
+  const dayKey = moscowDayKey(now);
+  const run = db.transaction(() => {
+    ensureMember.run(guildId, userId);
+    db.prepare(
+      "INSERT INTO economy_daily_quests (guild_id,user_id,day_key,task_key,progress) VALUES (?,?,?,?,0) ON CONFLICT(guild_id,user_id,day_key,task_key) DO NOTHING",
+    ).run(guildId, userId, dayKey, taskKey);
+    const current = db.prepare(
+      "SELECT progress, completed_at FROM economy_daily_quests WHERE guild_id=? AND user_id=? AND day_key=? AND task_key=?",
+    ).get(guildId, userId, dayKey, taskKey);
+    if (current.completed_at) {
+      return { ok: true, completed: true, newlyCompleted: false, progress: task.target, reward: 0, balance: getBalance(guildId, userId).balance };
+    }
+    const progress = Math.min(task.target, Number(current.progress || 0) + amount);
+    const completed = progress >= task.target;
+    db.prepare(
+      "UPDATE economy_daily_quests SET progress=?, completed_at=? WHERE guild_id=? AND user_id=? AND day_key=? AND task_key=?",
+    ).run(progress, completed ? now : null, guildId, userId, dayKey, taskKey);
+    if (completed) {
+      db.prepare("UPDATE member_stats SET balance=balance+? WHERE guild_id=? AND user_id=?")
+        .run(task.reward, guildId, userId);
+      logTransaction.run(guildId, userId, null, task.reward, "quest", task.name, now);
+    }
+    return {
+      ok: true, completed, newlyCompleted: completed, progress,
+      reward: completed ? task.reward : 0,
+      balance: getBalance(guildId, userId).balance,
+    };
+  });
+  return run();
+}
 
 function getBalance(guildId, userId) {
   const row = getBalanceStatement.get(guildId, userId);
@@ -99,7 +177,12 @@ function claimDaily(guildId, userId, now = Date.now()) {
     logTransaction.run(guildId, userId, null, DAILY_REWARD, "daily", "Ежедневная награда", now);
     return { claimed: true, reward: DAILY_REWARD, balance: current.balance + DAILY_REWARD, remainingMs: DAILY_COOLDOWN_MS };
   });
-  return run();
+  const result = run();
+  if (result.claimed) {
+    recordQuestProgress(guildId, userId, "daily", 1, now);
+    result.balance = getBalance(guildId, userId).balance;
+  }
+  return result;
 }
 function buyItem(guildId, userId, itemId, now = Date.now()) {
   const item = itemById.get(itemId);
@@ -116,7 +199,12 @@ function buyItem(guildId, userId, itemId, now = Date.now()) {
     logTransaction.run(guildId,userId,null,-item.price,"purchase",item.id,now);
     return { ok: true, item, balance: getBalance(guildId,userId).balance };
   });
-  return run();
+  const result = run();
+  if (result.ok) {
+    recordQuestProgress(guildId, userId, "purchase", 1, now);
+    result.balance = getBalance(guildId, userId).balance;
+  }
+  return result;
 }
 function getInventory(guildId, userId) {
   return db.prepare("SELECT item_id, purchased_at FROM economy_inventory WHERE guild_id=? AND user_id=? ORDER BY purchased_at, item_id")
@@ -168,4 +256,4 @@ function getTransactions(guildId, userId, limit = 10) {
   return db.prepare("SELECT amount,kind,details,created_at FROM economy_transactions WHERE guild_id=? AND user_id=? ORDER BY id DESC LIMIT ?")
     .all(guildId,userId,Math.min(25,Math.max(1,limit)));
 }
-module.exports = { DAILY_REWARD, DAILY_COOLDOWN_MS, CATALOG, getBalance, claimDaily, buyItem, getInventory, getCustomProfile, equipItem, removeEquipped, adjustBalance, getTransactions };
+module.exports = { DAILY_REWARD, DAILY_COOLDOWN_MS, DAILY_QUESTS, CATALOG, getBalance, claimDaily, buyItem, getInventory, getCustomProfile, equipItem, removeEquipped, adjustBalance, getTransactions, getDailyQuests, recordQuestProgress, moscowDayKey };
