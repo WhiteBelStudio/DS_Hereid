@@ -105,10 +105,11 @@ for (const [name, definition] of [
   ["assigned_to", "TEXT"],
   ["closed_by", "TEXT"],
   ["close_reason", "TEXT"],
-  ["updated_at", "TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP"],
+  ["updated_at", "TEXT"],
 ]) {
   if (!ticketColumns.includes(name)) db.exec(`ALTER TABLE tickets ADD COLUMN ${name} ${definition}`);
 }
+db.exec("UPDATE tickets SET updated_at = COALESCE(updated_at, closed_at, created_at, CURRENT_TIMESTAMP) WHERE updated_at IS NULL");
 db.exec("CREATE INDEX IF NOT EXISTS idx_tickets_guild_status ON tickets(guild_id, status, id)");
 db.exec("CREATE INDEX IF NOT EXISTS idx_ticket_messages_ticket ON support_ticket_messages(ticket_id, id)");
 
