@@ -26,12 +26,12 @@ function fitText(ctx, text, maxWidth, startSize, font = "600") {
   return size;
 }
 
-async function renderProfileCard({ user, displayName, title, badge, frame, level, xp, balance, percent, inventoryCount }) {
+async function renderProfileCard({ user, displayName, title, badge, banner, level, xp, balance, percent, inventoryCount }) {
   const width = 1200;
   const height = 480;
   const canvas = createCanvas(width, height);
   const ctx = canvas.getContext("2d");
-  const palette = THEMES[frame?.value] || DEFAULT_THEME;
+  const palette = THEMES[banner?.value] || DEFAULT_THEME;
   const bg = ctx.createLinearGradient(0, 0, width, height);
   bg.addColorStop(0, palette[0]);
   bg.addColorStop(0.58, palette[1]);
@@ -143,7 +143,7 @@ async function renderProfileCard({ user, displayName, title, badge, frame, level
 
   ctx.fillStyle = "rgba(255,255,255,0.7)";
   ctx.font = "500 16px sans-serif";
-  ctx.fillText(frame ? `THEME  •  ${String(frame.value).toUpperCase()}` : "THEME  •  CLASSIC", 72, 352);
+  ctx.fillText(banner ? `BANNER  •  ${String(banner.value).toUpperCase()}` : "BANNER  •  CLASSIC", 72, 352);
   ctx.fillStyle = palette[2];
   ctx.font = "700 18px sans-serif";
   ctx.fillText("YOUR PROFILE. YOUR STYLE.", 72, 388);
