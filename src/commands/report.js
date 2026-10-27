@@ -25,8 +25,14 @@ function isStaff(interaction) {
 }
 
 function audit(guildId, actorId, action, reportId, details = "") {
-  db.prepare("INSERT INTO admin_audit (guild_id, actor_id, action, target_id, details) VALUES (?, ?, ?, ?, ?)")
-    .run(guildId, actorId, action, String(reportId), String(details).slice(0, 900));
+  // Audit history is best-effort: a legacy audit-table schema must never make
+  // a user's report submission fail after the report itself was saved.
+  try {
+    db.prepare("INSERT INTO admin_audit (guild_id, actor_id, action, target_id, details) VALUES (?, ?, ?, ?, ?)")
+      .run(guildId, actorId, action, String(reportId), String(details).slice(0, 900));
+  } catch (error) {
+    console.error("[report] Could not write admin audit record:", error);
+  }
 }
 
 function reportEmbed(report, reporterLabel, targetLabel) {
