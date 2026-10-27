@@ -42,11 +42,14 @@ function interaction(subcommand, options = {}) {
       this.lastReply = payload;
       return payload;
     },
+    isButton: () => false,
+    isModalSubmit: () => false,
+    isChannelSelectMenu: () => false,
+    isStringSelectMenu: () => false,
+    values: [],
   };
   return result;
 }
-
-
 
 function testChannel(id, name) {
   return {
@@ -61,7 +64,6 @@ function testChannel(id, name) {
       permissions.includes(PermissionFlagsBits.SendMessages) }),
   };
 }
-
 
 function adminButtonInteraction(customId) {
   const ctx = adminInteraction(customId);
@@ -91,6 +93,9 @@ function adminInteraction(customId, fields = {}, { channel = null, role = null }
   ctx.isButton = () => false;
   ctx.isModalSubmit = () => customId.startsWith("ha:modal:");
   ctx.fields = { getTextInputValue: (name) => fields[name] ?? "" };
+  ctx.isChannelSelectMenu = () => false;
+  ctx.isStringSelectMenu = () => false;
+  ctx.values = [];
   return ctx;
 }
 
@@ -163,7 +168,6 @@ async function main() {
     assert.match(ctx.lastReply.content, /установлен/);
   });
 
-
   await test("admin panel reset clears related settings atomically and records audit", async () => {
     db.prepare("UPDATE guild_settings SET welcome_channel_id=?, welcome_message=? WHERE guild_id=?")
       .run("12345678901234575", "Panel welcome", guildId);
@@ -220,7 +224,6 @@ async function main() {
     assert.match(ctx.lastReply.content, /Настройка сохранена/);
   });
 
-
   await test("admin panel saves goodbye channel and custom message", async () => {
     const channel = testChannel("12345678901234578", "goodbye");
     const ctx = adminInteraction("ha:modal:setting:goodbye", {
@@ -275,7 +278,6 @@ async function main() {
     assert.equal(db.prepare("SELECT COUNT(*) n FROM admin_audit WHERE guild_id=?").get(guildId).n, 11);
   });
 
-
   await test("admin settings panel exposes all setting and reset controls", async () => {
     const ctx = adminButtonInteraction("ha:settings");
     await adminPanel.handle(ctx);
@@ -295,7 +297,6 @@ async function main() {
       assert.equal(ctx.lastModal.toJSON().components.length, action === "welcome" || action === "goodbye" ? 2 : 1);
     }
   });
-
 
   await test("settings and member data survive closing and reopening SQLite", async () => {
     const ctx = interaction("welcome-message", { message: "Persisted after restart: {user}" });
