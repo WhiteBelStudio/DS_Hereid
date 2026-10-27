@@ -12,6 +12,7 @@ const { ensureMember, recordMessage, recordVoiceState, evaluateMember, evaluateG
 const { evaluateAchievements } = require("./achievements");
 const { recordQuestProgress } = require("./economy");
 const tickets = require("./tickets");
+const reports = require("./commands/report");
 const { moderateMessage } = require("./automod");
 const music = require("./music");
 const { startAutomationScheduler, stopAutomationScheduler } = require("./automation");
@@ -147,6 +148,11 @@ client.on(Events.InteractionCreate, async (interaction) => {
     if (interaction.isButton() && interaction.customId?.startsWith("music:")) {
       const handled = await music.handleButton(interaction);
       if (handled) return;
+    }
+
+    if (interaction.isModalSubmit() && interaction.customId?.startsWith("rp:")) {
+      await reports.handleModal(interaction);
+      return;
     }
 
     if ((interaction.isButton() || interaction.isModalSubmit()) &&

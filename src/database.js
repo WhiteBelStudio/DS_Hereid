@@ -18,6 +18,7 @@ db.exec(`
     welcome_channel_id TEXT,
     goodbye_channel_id TEXT,
     mod_log_channel_id TEXT,
+    report_channel_id TEXT,
     ticket_category_id TEXT,
     welcome_message TEXT,
     goodbye_message TEXT,
@@ -57,6 +58,21 @@ db.exec(`
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     closed_at TEXT
+  );
+  CREATE TABLE IF NOT EXISTS reports (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    guild_id TEXT NOT NULL,
+    reporter_id TEXT NOT NULL,
+    target_id TEXT,
+    category TEXT NOT NULL,
+    description TEXT NOT NULL,
+    evidence_url TEXT,
+    status TEXT NOT NULL DEFAULT 'open' CHECK(status IN ('open','resolved')),
+    handled_by TEXT,
+    resolution TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    resolved_at TEXT
   );
   CREATE TABLE IF NOT EXISTS support_ticket_messages (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -156,6 +172,8 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_admin_audit_guild_id ON admin_audit(guild_id, id);
 `);
 
+const guildSettingsColumns = db.prepare("PRAGMA table_info(guild_settings)").all().map((column) => column.name);
+if (!guildSettingsColumns.includes("report_channel_id")) db.exec("ALTER TABLE guild_settings ADD COLUMN report_channel_id TEXT");
 const ticketColumns = db.prepare("PRAGMA table_info(tickets)").all().map((column) => column.name);
 for (const [name, definition] of [
   ["category", "TEXT NOT NULL DEFAULT 'general'"],
@@ -169,6 +187,7 @@ for (const [name, definition] of [
 }
 db.exec("UPDATE tickets SET updated_at = COALESCE(updated_at, closed_at, created_at, CURRENT_TIMESTAMP) WHERE updated_at IS NULL");
 db.exec("CREATE INDEX IF NOT EXISTS idx_tickets_guild_status ON tickets(guild_id, status, id)");
+db.exec("CREATE INDEX IF NOT EXISTS idx_reports_guild_status ON reports(guild_id, status, id)");
 db.exec("CREATE INDEX IF NOT EXISTS idx_ticket_messages_ticket ON support_ticket_messages(ticket_id, id)");
 db.exec("CREATE INDEX IF NOT EXISTS idx_scheduled_tasks_due ON scheduled_tasks(status, scheduled_at)");
 db.exec("CREATE INDEX IF NOT EXISTS idx_scheduled_tasks_guild ON scheduled_tasks(guild_id, status, scheduled_at)");
