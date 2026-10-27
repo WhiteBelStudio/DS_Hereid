@@ -17,6 +17,7 @@
     "discord.js": "^14.19.3",
     "dotenv": "^16.4.7",
     "@discordjs/voice": "^0.19.0",
-    "play-dl": "^1.9.7"
+    "play-dl": "^1.9.7",
+    "@napi-rs/canvas": "^0.1.80"
   }
 }
