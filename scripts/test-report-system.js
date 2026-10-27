@@ -26,15 +26,20 @@ async function run() {
   const reporterId = "345678901234567890";
   const targetId = "456789012345678901";
   const sent = [];
+  const fetchedChannelIds = [];
   db.prepare("INSERT INTO guild_settings (guild_id, report_channel_id) VALUES (?, ?)").run(guildId, "567890123456789012");
   const interaction = {
     customId: "rp:submit:rules:" + targetId,
     guildId,
     user: { id: reporterId, tag: "reporter#0001" },
-    guild: { channels: { fetch: async () => ({
-      isTextBased: () => true, isSendable: () => true,
-      send: async (payload) => { sent.push(payload); },
-    }) } },
+    guild: { channels: { fetch: async (channelId) => {
+      fetchedChannelIds.push(channelId);
+      return {
+        id: channelId,
+        isTextBased: () => true, isSendable: () => true,
+        send: async (payload) => { sent.push(payload); },
+      };
+    } } },
     client: { logger: { error: () => {}, warn: () => {} } },
     fields: { getTextInputValue: (name) => name === "description"
       ? "A detailed report with enough context to review."
@@ -44,6 +49,7 @@ async function run() {
   };
   assert.equal(await reportCommand.handleModal(interaction), true);
   assert.equal(sent.length, 1);
+  assert.deepEqual(fetchedChannelIds, ["1564742933872377907"]);
   assert.match(interaction.replyPayload.content, /Репорт #1 отправлен персоналу/);
   const report = db.prepare("SELECT * FROM reports WHERE guild_id=? AND reporter_id=?").get(guildId, reporterId);
   assert.ok(report);
@@ -76,14 +82,19 @@ async function run() {
     client: { logger: { warn: () => {} }, users: { fetch: async () => ({ send: async () => {} }) } },
     reply: async (payload) => { resolveInteraction.replyPayload = payload; },
   };
-  resolveInteraction.guild.channels = { fetch: async () => ({
-    isTextBased: () => true, isSendable: () => true, send: async (payload) => { sent.push(payload); },
-  }) };
+  resolveInteraction.guild.channels = { fetch: async (channelId) => {
+    fetchedChannelIds.push(channelId);
+    return {
+      id: channelId,
+      isTextBased: () => true, isSendable: () => true, send: async (payload) => { sent.push(payload); },
+    };
+  } };
   await reportCommand.execute(resolveInteraction);
   const resolved = db.prepare("SELECT * FROM reports WHERE id=?").get(report.id);
   assert.equal(resolved.status, "resolved");
   assert.equal(resolved.resolution, "Проверено, обращение передано модерации.");
   assert.equal(resolved.handled_by, staffId);
+  assert.deepEqual(fetchedChannelIds, ["1564742933872377907", "1564742933872377907"]);
   assert.match(resolveInteraction.replyPayload.content, /отмечен как рассмотренный/);
   db.close();
   fs.rmSync(tempDir, { recursive: true, force: true });
