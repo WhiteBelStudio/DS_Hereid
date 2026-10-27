@@ -17,7 +17,7 @@ const ITEM_STYLE = {
   banner_sunset: { emoji: "🌅", rarity: "ЭПИЧЕСКИЙ" },
   banner_neon: { emoji: "💠", rarity: "ЭПИЧЕСКИЙ" },
   banner_ice: { emoji: "❄️", rarity: "ЭПИЧЕСКИЙ" },
-  banner_shadow: { emoji: "🌑", rarity: "ЭПИЧЕСКИЙ" },
+  banner_shadow: { emoji: "🌑", rarity: "ЛЕГЕНДАРНЫЙ" },
   banner_galaxy: { emoji: "🌌", rarity: "ЛЕГЕНДАРНЫЙ" },
   banner_gold: { emoji: "👑", rarity: "МИФИЧЕСКИЙ" },
 };
