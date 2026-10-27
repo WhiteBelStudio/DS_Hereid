@@ -10,8 +10,10 @@ const { isFeatureEnabled } = require("../features");
 const ACTION_LABELS = {
   warn: "Предупреждение",
   timeout: "Тайм-аут",
+  untimeout: "Снятие тайм-аута",
   kick: "Кик",
   ban: "Бан",
+  unban: "Разбан",
 };
 
 function isTrustedStaff(interaction) {
@@ -184,6 +186,12 @@ module.exports = {
     .addSubcommand((s) => s.setName("ban").setDescription("Заблокировать пользователя на сервере.")
       .addUserOption((o) => o.setName("member").setDescription("Пользователь").setRequired(true))
       .addStringOption((o) => o.setName("reason").setDescription("Причина наказания").setMaxLength(500).setRequired(true)))
+    .addSubcommand((s) => s.setName("untimeout").setDescription("Снять тайм-аут с участника.")
+      .addUserOption((o) => o.setName("member").setDescription("Участник").setRequired(true))
+      .addStringOption((o) => o.setName("reason").setDescription("Причина снятия").setMaxLength(500).setRequired(true)))
+    .addSubcommand((s) => s.setName("unban").setDescription("Разблокировать пользователя по ID.")
+      .addStringOption((o) => o.setName("user_id").setDescription("Discord ID забаненного пользователя").setMinLength(17).setMaxLength(20).setRequired(true))
+      .addStringOption((o) => o.setName("reason").setDescription("Причина разбана").setMaxLength(500).setRequired(true)))
     .addSubcommand((s) => s.setName("history").setDescription("Посмотреть последние наказания.")
       .addUserOption((o) => o.setName("member").setDescription("Фильтр по участнику").setRequired(false))),
 
@@ -207,6 +215,72 @@ module.exports = {
       const embed = new EmbedBuilder().setColor(0x5865f2).setTitle("🛡️ История наказаний")
         .setDescription(rows.length ? rows.map((r) => `**#${r.id} · ${ACTION_LABELS[r.action] || r.action}** — <@${r.target_id}>\nМодератор: <@${r.moderator_id}> · ${r.reason || "Причина не указана"}${r.duration_minutes ? ` · ${r.duration_minutes} мин.` : ""}\n<t:${Math.floor(new Date(r.created_at).getTime() / 1000)}:R>`).join("\n\n").slice(0, 4000) : "Записей пока нет.");
       return interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral, allowedMentions: { parse: [] } });
+    }
+
+    if (subcommand === "untimeout") {
+      if (!hasPermission(interaction, PermissionFlagsBits.ModerateMembers)) {
+        return interaction.reply({ content: "⛔ Недостаточно прав. Нужны права «Модерировать участников» или доступ персонала к модерации.", flags: MessageFlags.Ephemeral });
+      }
+      const target = interaction.options.getUser("member");
+      const reason = interaction.options.getString("reason").trim();
+      if (!reason) return interaction.reply({ content: "Укажи причину снятия тайм-аута.", flags: MessageFlags.Ephemeral });
+      const member = await interaction.guild.members.fetch(target.id).catch(() => null);
+      if (!member) return interaction.reply({ content: "⛔ Этот пользователь не состоит на сервере.", flags: MessageFlags.Ephemeral });
+      if (!member.isCommunicationDisabled()) {
+        return interaction.reply({ content: "ℹ️ У этого участника сейчас нет тайм-аута.", flags: MessageFlags.Ephemeral });
+      }
+      const actor = await interaction.guild.members.fetch(interaction.user.id).catch(() => null);
+      const botMember = await interaction.guild.members.fetchMe().catch(() => null);
+      if (!actor || member.roles.highest.position >= actor.roles.highest.position) {
+        return interaction.reply({ content: "⛔ Нельзя снять тайм-аут с участника с равной или более высокой ролью.", flags: MessageFlags.Ephemeral });
+      }
+      if (!botMember || !member.moderatable || member.roles.highest.position >= botMember.roles.highest.position) {
+        return interaction.reply({ content: "⛔ Бот не может снять тайм-аут с этого участника. Проверь право «Модерировать участников» и иерархию ролей.", flags: MessageFlags.Ephemeral });
+      }
+      try {
+        await member.timeout(null, reason);
+        const caseId = recordCase(interaction.guildId, target.id, interaction.user.id, "untimeout", reason);
+        await sendModLog(interaction, "untimeout", target, reason, null, caseId);
+        return interaction.reply({
+          content: `✅ Тайм-аут снят с <@${target.id}>.\nПричина: ${reason}\nНомер случая: #${caseId}`,
+          flags: MessageFlags.Ephemeral,
+          allowedMentions: { parse: [] },
+        });
+      } catch (error) {
+        interaction.client.logger?.error?.("Failed to remove timeout.", error);
+        return interaction.reply({ content: "⚠️ Не удалось снять тайм-аут. Проверь права бота и журнал запуска.", flags: MessageFlags.Ephemeral });
+      }
+    }
+
+    if (subcommand === "unban") {
+      if (!hasPermission(interaction, PermissionFlagsBits.BanMembers)) {
+        return interaction.reply({ content: "⛔ Недостаточно прав. Нужны права «Банить участников» или доступ персонала к модерации.", flags: MessageFlags.Ephemeral });
+      }
+      const userId = interaction.options.getString("user_id").trim();
+      const reason = interaction.options.getString("reason").trim();
+      if (!/^\d{17,20}$/.test(userId)) {
+        return interaction.reply({ content: "⛔ Укажи корректный Discord ID пользователя (17–20 цифр).", flags: MessageFlags.Ephemeral });
+      }
+      if (!reason) return interaction.reply({ content: "Укажи причину разбана.", flags: MessageFlags.Ephemeral });
+      const botMember = await interaction.guild.members.fetchMe().catch(() => null);
+      if (!botMember?.permissions.has(PermissionFlagsBits.BanMembers)) {
+        return interaction.reply({ content: "⛔ Боту нужно право «Банить участников».", flags: MessageFlags.Ephemeral });
+      }
+      try {
+        const ban = await interaction.guild.bans.fetch(userId).catch(() => null);
+        if (!ban) return interaction.reply({ content: "ℹ️ Пользователь с таким ID не найден среди забаненных.", flags: MessageFlags.Ephemeral });
+        await interaction.guild.members.unban(userId, reason);
+        const caseId = recordCase(interaction.guildId, userId, interaction.user.id, "unban", reason);
+        await sendModLog(interaction, "unban", ban.user, reason, null, caseId);
+        return interaction.reply({
+          content: `✅ Пользователь <@${userId}> разбанен.\nПричина: ${reason}\nНомер случая: #${caseId}`,
+          flags: MessageFlags.Ephemeral,
+          allowedMentions: { parse: [] },
+        });
+      } catch (error) {
+        interaction.client.logger?.error?.("Failed to unban user.", error);
+        return interaction.reply({ content: "⚠️ Не удалось выполнить разбан. Проверь права бота и журнал запуска.", flags: MessageFlags.Ephemeral });
+      }
     }
 
     const actionPermissions = {
