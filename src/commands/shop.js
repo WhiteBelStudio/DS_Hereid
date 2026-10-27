@@ -124,7 +124,7 @@ module.exports = {
     let embedSize = embed.data.title.length + description.length + embed.data.footer.text.length;
     const addPagedField = (field) => {
       const fieldSize = field.name.length + field.value.length;
-      if (embedSize + fieldSize > 5400 || embed.data.fields.length >= 25) {
+      if (embedSize + fieldSize > 5400 || (embed.data.fields || []).length >= 25) {
         embeds.push(embed);
         embed = createEmbed();
         embedSize = embed.data.title.length + description.length + embed.data.footer.text.length;
