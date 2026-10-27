@@ -46,7 +46,7 @@ const ITEM_STYLE = {
   banner_gold: { emoji: "👑" },
 };
 function sortCatalogItems(items) {
-  const categoryOrder = ["Титулы", "Баннеры", "Значки", "Цвета"];
+  const categoryOrder = ["Титулы", "Значки", "Баннеры", "Цвета"];
   return [...items].sort((a, b) => {
     const categoryDifference = categoryOrder.indexOf(a.category) - categoryOrder.indexOf(b.category);
     if (categoryDifference !== 0) return categoryDifference;
@@ -133,36 +133,51 @@ module.exports = {
       embedSize += fieldSize;
     };
 
-    if (category === "all") {
-      for (const itemCategory of ["Титулы", "Баннеры", "Значки", "Цвета"]) {
-        const group = items.filter((item) => item.category === itemCategory);
+    const categoryOrder = ["Титулы", "Значки", "Баннеры", "Цвета"];
+    const rarityEmoji = {
+      Обычный: "⚪",
+      Редкий: "🔹",
+      Эпический: "🟣",
+      Легендарный: "🟠",
+      Мифический: "💠",
+    };
+    const renderCategory = (itemCategory) => {
+      const categoryItems = items.filter((item) => item.category === itemCategory);
+      if (!categoryItems.length) return;
+      for (const rarity of RARITY_ORDER) {
+        const group = categoryItems
+          .filter((item) => getItemRarity(item) === rarity)
+          .sort((a, b) => a.price - b.price || a.name.localeCompare(b.name, "ru"));
         if (!group.length) continue;
         for (let i = 0; i < group.length; i += 5) {
           const chunk = group.slice(i, i + 5);
+          const range = group.length > 5 ? ` · ${i + 1}–${i + chunk.length}` : "";
           addPagedField({
-            name: i === 0 ? CATEGORY_LABELS[itemCategory] : `Продолжение · ${CATEGORY_LABELS[itemCategory]} · ${i + 1}–${i + chunk.length}`,
+            name: `${i === 0 ? CATEGORY_LABELS[itemCategory] : "↳ Продолжение"} · ${rarityEmoji[rarity]} ${rarity.toLocaleUpperCase("ru-RU")}${range}`,
             value: chunk.map(itemLine).join("\n\n"),
             inline: false,
           });
         }
       }
+    };
+
+    if (category === "all") {
+      for (const itemCategory of categoryOrder) renderCategory(itemCategory);
     } else if (items.length) {
-      for (let i = 0; i < items.length; i += 5) {
-        const group = items.slice(i, i + 5);
-        addPagedField({
-          name: i === 0 ? CATEGORY_LABELS[category] || category : `Продолжение · ${i + 1}–${i + group.length}`,
-          value: group.map(itemLine).join("\n\n").slice(0, 1024),
-          inline: false,
-        });
-      }
+      renderCategory(category);
     } else {
       addPagedField({ name: CATEGORY_LABELS[category] || category, value: "Пока здесь пусто — загляни позже." });
     }
 
     if (banners.length) {
+      const bannerPreview = banners
+        .slice()
+        .sort((a, b) => a.price - b.price || a.name.localeCompare(b.name, "ru"))
+        .map((item) => `${ITEM_STYLE[item.id]?.emoji || "🖼️"} ${item.name} — ${item.price.toLocaleString("ru-RU")} 🪙`)
+        .join("\n");
       addPagedField({
-        name: "🖼️ КОЛЛЕКЦИЯ ОФОРМЛЕНИЯ",
-        value: "🌊 Бездна океана · 🌿 Изумрудная чаща · 🌅 Последний закат · 💠 Неоновый импульс\n❄️ Кристальный шторм · 🌌 Рождение галактики · 🌑 Тихая тень · 👑 Золотая династия\n\nКаждый баннер меняет всю атмосферу карточки профиля.",
+        name: "🖼️ ПОДБОРКА БАННЕРОВ · ОТ ДОСТУПНЫХ К ПРЕМИАЛЬНЫМ",
+        value: `${bannerPreview}\n\nКаждый баннер меняет атмосферу карточки профиля.`,
         inline: false,
       });
     }
