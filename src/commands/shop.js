@@ -71,11 +71,14 @@ module.exports = {
       for (const itemCategory of ["Баннеры", "Титулы", "Значки", "Цвета"]) {
         const group = items.filter((item) => item.category === itemCategory);
         if (!group.length) continue;
-        embed.addFields({
-          name: CATEGORY_LABELS[itemCategory],
-          value: group.map(itemLine).join("\n\n").slice(0, 1024),
-          inline: false,
-        });
+        for (let i = 0; i < group.length; i += 5) {
+          const chunk = group.slice(i, i + 5);
+          embed.addFields({
+            name: i === 0 ? CATEGORY_LABELS[itemCategory] : `Продолжение · ${CATEGORY_LABELS[itemCategory]} · ${i + 1}–${i + chunk.length}`,
+            value: chunk.map(itemLine).join("\n\n"),
+            inline: false,
+          });
+        }
       }
     } else if (items.length) {
       for (let i = 0; i < items.length; i += 5) {
