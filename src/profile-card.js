@@ -37,80 +37,95 @@ function drawBannerArt(ctx, theme, width, height) {
   const random = seeded(theme.motif);
   const gradient = ctx.createLinearGradient(0, 0, width, height);
   gradient.addColorStop(0, c1);
-  gradient.addColorStop(0.48, c2);
+  gradient.addColorStop(0.42, c2);
   gradient.addColorStop(1, c1);
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, width, height);
 
-  const glow = ctx.createRadialGradient(width * 0.74, height * 0.32, 8, width * 0.74, height * 0.32, width * 0.52);
-  glow.addColorStop(0, accent + "aa");
+  // Atmospheric light beams and layered glow.
+  for (let i = 0; i < 5; i++) {
+    const gx = width * (0.48 + i * 0.13);
+    const beam = ctx.createLinearGradient(gx, 0, gx - 150, height);
+    beam.addColorStop(0, accent + "00");
+    beam.addColorStop(0.5, accent + "24");
+    beam.addColorStop(1, accent + "00");
+    ctx.fillStyle = beam;
+    ctx.beginPath();
+    ctx.moveTo(gx - 28, 0);
+    ctx.lineTo(gx + 28, 0);
+    ctx.lineTo(gx - 100, height);
+    ctx.lineTo(gx - 175, height);
+    ctx.closePath();
+    ctx.fill();
+  }
+  const glow = ctx.createRadialGradient(width * 0.72, height * 0.38, 4, width * 0.72, height * 0.38, width * 0.65);
+  glow.addColorStop(0, accent + "bb");
+  glow.addColorStop(0.32, c2 + "77");
   glow.addColorStop(1, accent + "00");
   ctx.fillStyle = glow;
   ctx.fillRect(0, 0, width, height);
 
+  // Each named banner gets its own recognizable artwork rather than a generic gradient.
   ctx.save();
-  ctx.globalAlpha = 0.34;
-  ctx.strokeStyle = accent;
-  ctx.fillStyle = accent;
-  ctx.lineWidth = 2;
   if (theme.motif === "ocean") {
-    for (let i = 0; i < 10; i++) {
-      ctx.beginPath();
-      ctx.moveTo(0, height * (0.35 + i * 0.08));
-      for (let x = 0; x <= width; x += 30) {
-        const y = height * (0.35 + i * 0.08) + Math.sin(x / 65 + i) * (9 + i);
-        ctx.lineTo(x, y);
-      }
+    for (let i = 0; i < 16; i++) {
+      ctx.beginPath(); ctx.strokeStyle = i % 2 ? accent + "90" : "#ffffff55"; ctx.lineWidth = 2 + i % 3;
+      ctx.moveTo(0, height * (0.3 + i * 0.045));
+      for (let x = 0; x <= width; x += 18) ctx.lineTo(x, height * (0.3 + i * 0.045) + Math.sin(x / 72 + i * 0.6) * (12 + i * 1.5));
       ctx.stroke();
     }
-    for (let i = 0; i < 34; i++) {
-      const x = random() * width, y = random() * height;
-      ctx.beginPath(); ctx.arc(x, y, 1 + random() * 4, 0, Math.PI * 2); ctx.fill();
-    }
+    // Glowing underwater shafts and bubbles.
+    for (let i = 0; i < 70; i++) { ctx.fillStyle = accent + (i % 3 ? "88" : "cc"); ctx.beginPath(); ctx.arc(random() * width, random() * height, 1 + random() * 3, 0, Math.PI * 2); ctx.fill(); }
   } else if (theme.motif === "forest") {
-    for (let i = 0; i < 24; i++) {
-      const x = random() * width, h = 30 + random() * 120;
-      ctx.beginPath(); ctx.moveTo(x, height); ctx.lineTo(x - h * 0.24, height - h * 0.48); ctx.lineTo(x, height - h); ctx.lineTo(x + h * 0.24, height - h * 0.48); ctx.closePath(); ctx.fill();
+    for (let i = 0; i < 35; i++) {
+      const x = random() * width, h = 40 + random() * 160, w = 18 + random() * 35;
+      ctx.fillStyle = i % 2 ? "#03140dcc" : accent + "55";
+      ctx.beginPath(); ctx.moveTo(x, height); ctx.lineTo(x - w, height - h * 0.45); ctx.lineTo(x, height - h); ctx.lineTo(x + w, height - h * 0.45); ctx.closePath(); ctx.fill();
     }
-    for (let i = 0; i < 45; i++) { ctx.globalAlpha = random() * 0.55; ctx.beginPath(); ctx.arc(random() * width, random() * height, 1 + random() * 3, 0, Math.PI * 2); ctx.fill(); }
+    ctx.strokeStyle = accent + "99"; ctx.lineWidth = 3;
+    for (let i = 0; i < 8; i++) { ctx.beginPath(); ctx.moveTo(random() * width, height); ctx.lineTo(random() * width, 0); ctx.stroke(); }
+    for (let i = 0; i < 55; i++) { ctx.fillStyle = "#d8ffd788"; ctx.beginPath(); ctx.arc(random() * width, random() * height, 1 + random() * 2, 0, Math.PI * 2); ctx.fill(); }
   } else if (theme.motif === "sunset") {
-    ctx.globalAlpha = 0.4;
-    ctx.beginPath(); ctx.arc(width * 0.78, height * 0.4, 78, 0, Math.PI * 2); ctx.fill();
-    for (let i = 0; i < 7; i++) {
-      ctx.beginPath(); ctx.moveTo(width * 0.48, height * (0.7 + i * 0.045)); ctx.quadraticCurveTo(width * 0.75, height * (0.45 + i * 0.035), width, height * (0.7 + i * 0.045)); ctx.stroke();
-    }
+    const sun = ctx.createRadialGradient(width * 0.76, height * 0.43, 8, width * 0.76, height * 0.43, 100);
+    sun.addColorStop(0, "#fff7ce"); sun.addColorStop(0.35, accent); sun.addColorStop(1, accent + "00");
+    ctx.fillStyle = sun; ctx.beginPath(); ctx.arc(width * 0.76, height * 0.43, 110, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#25102d99"; ctx.beginPath(); ctx.moveTo(0, height); ctx.lineTo(width * 0.18, height * 0.6); ctx.lineTo(width * 0.3, height * 0.77); ctx.lineTo(width * 0.47, height * 0.49); ctx.lineTo(width * 0.68, height); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = "#190f2dcc"; ctx.beginPath(); ctx.moveTo(width * 0.48, height); ctx.lineTo(width * 0.73, height * 0.62); ctx.lineTo(width * 0.88, height * 0.72); ctx.lineTo(width, height * 0.42); ctx.lineTo(width, height); ctx.closePath(); ctx.fill();
+    for (let i = 0; i < 7; i++) { ctx.strokeStyle = "#ffd59b88"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(width * 0.58, height * (0.7 + i * 0.035)); ctx.quadraticCurveTo(width * 0.78, height * (0.55 + i * 0.03), width, height * (0.7 + i * 0.035)); ctx.stroke(); }
   } else if (theme.motif === "neon") {
-    ctx.globalAlpha = 0.6;
-    for (let i = -4; i < 12; i++) { ctx.beginPath(); ctx.moveTo(width * 0.48 + i * 65, 0); ctx.lineTo(width * 0.25 + i * 65, height); ctx.stroke(); }
-    for (let i = 0; i < 8; i++) { ctx.strokeRect(width * 0.55 + i * 18, height * 0.18 + i * 8, 190 - i * 15, 80 - i * 7); }
+    ctx.strokeStyle = accent + "aa"; ctx.lineWidth = 3;
+    for (let i = 0; i < 14; i++) { const x = i * 95 - 100; ctx.beginPath(); ctx.moveTo(x, height); ctx.lineTo(x + 110, height * 0.25); ctx.lineTo(x + 170, height * 0.25); ctx.lineTo(x + 280, height); ctx.stroke(); }
+    for (let i = 0; i < 10; i++) { ctx.strokeStyle = i % 2 ? "#ff4fe288" : accent + "bb"; ctx.lineWidth = 2; ctx.strokeRect(width * 0.55 + i * 17, height * 0.15 + i * 6, 210 - i * 22, 105 - i * 10); }
+    for (let i = 0; i < 36; i++) { ctx.fillStyle = i % 2 ? "#ff4fe2cc" : accent; ctx.fillRect(random() * width, random() * height, 2 + random() * 4, 2 + random() * 4); }
   } else if (theme.motif === "galaxy") {
-    ctx.globalAlpha = 0.55;
-    for (let i = 0; i < 170; i++) { const x = random() * width, y = random() * height; ctx.beginPath(); ctx.arc(x, y, random() * 2.7 + 0.4, 0, Math.PI * 2); ctx.fill(); }
-    ctx.lineWidth = 3;
-    for (let i = 0; i < 8; i++) { ctx.beginPath(); ctx.ellipse(width * 0.76, height * 0.46, 45 + i * 28, 14 + i * 10, -0.28, 0, Math.PI * 2); ctx.stroke(); }
+    for (let i = 0; i < 230; i++) { ctx.fillStyle = i % 4 ? "#ffffffcc" : accent; ctx.beginPath(); ctx.arc(random() * width, random() * height, random() * 2.3 + 0.4, 0, Math.PI * 2); ctx.fill(); }
+    ctx.translate(width * 0.76, height * 0.48); ctx.rotate(-0.32);
+    for (let i = 0; i < 12; i++) { ctx.strokeStyle = i % 2 ? accent + "99" : "#ffffff55"; ctx.lineWidth = 2 + i % 2; ctx.beginPath(); ctx.ellipse(0, 0, 28 + i * 25, 8 + i * 8, 0, 0, Math.PI * 2); ctx.stroke(); }
+    const core = ctx.createRadialGradient(0, 0, 2, 0, 0, 90); core.addColorStop(0, "#ffffff"); core.addColorStop(0.2, accent); core.addColorStop(1, accent + "00"); ctx.fillStyle = core; ctx.beginPath(); ctx.arc(0, 0, 90, 0, Math.PI * 2); ctx.fill();
   } else if (theme.motif === "gold") {
-    ctx.globalAlpha = 0.5;
-    for (let i = 0; i < 9; i++) { ctx.beginPath(); ctx.moveTo(width * (0.52 + i * 0.06), 0); ctx.lineTo(width * (0.3 + i * 0.06), height); ctx.stroke(); }
-    for (let i = 0; i < 70; i++) { ctx.beginPath(); ctx.arc(random() * width, random() * height, random() * 2 + 0.5, 0, Math.PI * 2); ctx.fill(); }
-    ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(width * 0.8, height * 0.45, 62, 0, Math.PI * 2); ctx.stroke();
+    ctx.strokeStyle = accent + "88"; ctx.lineWidth = 3;
+    for (let i = 0; i < 13; i++) { ctx.beginPath(); ctx.moveTo(width * (0.45 + i * 0.055), 0); ctx.lineTo(width * (0.22 + i * 0.06), height); ctx.stroke(); }
+    ctx.fillStyle = "#120d08dd"; ctx.beginPath(); ctx.moveTo(width * 0.65, height); ctx.lineTo(width * 0.69, height * 0.38); ctx.lineTo(width * 0.75, height * 0.52); ctx.lineTo(width * 0.81, height * 0.22); ctx.lineTo(width * 0.88, height * 0.5); ctx.lineTo(width * 0.95, height * 0.34); ctx.lineTo(width, height * 0.56); ctx.lineTo(width, height); ctx.closePath(); ctx.fill();
+    for (let i = 0; i < 90; i++) { ctx.fillStyle = i % 2 ? "#ffe7aacc" : accent; ctx.beginPath(); ctx.arc(random() * width, random() * height, random() * 2.4 + 0.4, 0, Math.PI * 2); ctx.fill(); }
   } else if (theme.motif === "ice") {
-    ctx.globalAlpha = 0.65;
-    for (let i = 0; i < 18; i++) {
-      const x = random() * width, y = random() * height, size = 22 + random() * 72;
-      ctx.beginPath(); ctx.moveTo(x, y - size); ctx.lineTo(x + size * 0.42, y); ctx.lineTo(x, y + size); ctx.lineTo(x - size * 0.42, y); ctx.closePath(); ctx.stroke();
-    }
+    ctx.strokeStyle = "#e5fbff99"; ctx.lineWidth = 2;
+    for (let i = 0; i < 24; i++) { const x = random() * width, y = random() * height, s = 25 + random() * 80; ctx.beginPath(); ctx.moveTo(x, y - s); ctx.lineTo(x + s * 0.45, y); ctx.lineTo(x, y + s); ctx.lineTo(x - s * 0.45, y); ctx.closePath(); ctx.stroke(); }
+    for (let i = 0; i < 12; i++) { const x = i * 115 - 30; ctx.strokeStyle = accent + "aa"; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x + 50, height * 0.5); ctx.lineTo(x + 8, height); ctx.stroke(); }
+    for (let i = 0; i < 80; i++) { ctx.fillStyle = "#ffffffbb"; ctx.beginPath(); ctx.arc(random() * width, random() * height, random() * 2 + 0.5, 0, Math.PI * 2); ctx.fill(); }
   } else {
-    ctx.globalAlpha = 0.35;
-    for (let i = 0; i < 13; i++) { ctx.beginPath(); ctx.ellipse(width * 0.76, height * 0.5, 60 + i * 28, 18 + i * 8, -0.5, 0, Math.PI * 2); ctx.stroke(); }
-    for (let i = 0; i < 50; i++) { ctx.beginPath(); ctx.arc(random() * width, random() * height, random() * 2 + 0.5, 0, Math.PI * 2); ctx.fill(); }
+    ctx.strokeStyle = accent + "88"; ctx.lineWidth = 2;
+    for (let i = 0; i < 14; i++) { ctx.beginPath(); ctx.ellipse(width * 0.78, height * 0.5, 35 + i * 25, 12 + i * 9, -0.42, 0, Math.PI * 2); ctx.stroke(); }
+    ctx.fillStyle = "#05040b99"; ctx.beginPath(); ctx.moveTo(0, height); ctx.lineTo(width * 0.2, height * 0.48); ctx.lineTo(width * 0.34, height * 0.7); ctx.lineTo(width * 0.49, height * 0.38); ctx.lineTo(width * 0.62, height); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = "#ff274499"; ctx.beginPath(); ctx.arc(width * 0.78, height * 0.36, 58, 0, Math.PI * 2); ctx.fill();
+    for (let i = 0; i < 65; i++) { ctx.fillStyle = i % 2 ? "#ff465e" : accent; ctx.beginPath(); ctx.arc(random() * width, random() * height, random() * 2 + 0.4, 0, Math.PI * 2); ctx.fill(); }
   }
   ctx.restore();
 
-  // Contrast overlay makes the banner title readable without hiding the artwork.
+  // Keep typography readable over detailed art.
   const shade = ctx.createLinearGradient(0, 0, width, 0);
-  shade.addColorStop(0, "rgba(0,0,0,0.54)");
-  shade.addColorStop(0.48, "rgba(0,0,0,0.12)");
-  shade.addColorStop(1, "rgba(0,0,0,0.04)");
+  shade.addColorStop(0, "rgba(0,0,0,0.68)");
+  shade.addColorStop(0.45, "rgba(0,0,0,0.28)");
+  shade.addColorStop(1, "rgba(0,0,0,0.02)");
   ctx.fillStyle = shade;
   ctx.fillRect(0, 0, width, height);
 }
