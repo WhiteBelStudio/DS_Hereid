@@ -83,11 +83,11 @@ module.exports = {
       .setTimestamp();
 
     if (imageBuffer) {
-      // One Discord message: the image is attached to the same embed as all profile details.
-      // Keep the graphic banner at the top of the PNG itself; embed text and fields remain below it.
+      // Send the complete card as a single image attachment. The PNG itself lays out
+      // the banner first and all profile details beneath it, avoiding Discord's
+      // embed layout which always places embed images after the text and fields.
       const attachment = new AttachmentBuilder(imageBuffer, { name: "profile-card.png" });
-      embed.setImage("attachment://profile-card.png");
-      await interaction.editReply({ embeds: [embed], files: [attachment] });
+      await interaction.editReply({ content: "", embeds: [], files: [attachment] });
     } else {
       embed.setThumbnail(user.displayAvatarURL({ size: 512 }));
       await interaction.editReply({ embeds: [embed] });
