@@ -103,10 +103,7 @@ module.exports = {
       (!rarityFilter || getItemRarity(item) === rarityFilter));
     const items = sortCatalogItems(filtered);
     const banners = items.filter((item) => item.category === "Баннеры");
-    const embed = new EmbedBuilder()
-      .setColor(0x7C5CFC)
-      .setTitle("✦ HERADELEGEND · ATELIER")
-      .setDescription([
+    const description = [
         "╭━━━━━━━━━━━━━━━━━━━━╮",
         "　**МАГАЗИН ПЕРСОНАЛИЗАЦИИ**",
         "　Собери стиль, который узнают с первого взгляда.",
@@ -116,7 +113,25 @@ module.exports = {
         "🎒 Купи предмет → примени через `/equip` → посмотри в `/profile`.",
         rarityFilter ? `**Редкость:** ${rarityFilter}` : null,
         `**Предметов в разделе:** ${items.length}`,
-      ].filter(Boolean).join("\n"));
+      ].filter(Boolean).join("\n");
+    const embeds = [];
+    const createEmbed = () => new EmbedBuilder()
+      .setColor(0x7C5CFC)
+      .setTitle("✦ HERADELEGEND · ATELIER")
+      .setDescription(description)
+      .setFooter({ text: "HeradeLegend Atelier · Твой профиль — твой стиль" });
+    let embed = createEmbed();
+    let embedSize = embed.data.title.length + description.length + embed.data.footer.text.length;
+    const addPagedField = (field) => {
+      const fieldSize = field.name.length + field.value.length;
+      if (embedSize + fieldSize > 5400 || (embed.data.fields || []).length >= 25) {
+        embeds.push(embed);
+        embed = createEmbed();
+        embedSize = embed.data.title.length + description.length + embed.data.footer.text.length;
+      }
+      embed.addFields(field);
+      embedSize += fieldSize;
+    };
 
     if (category === "all") {
       for (const itemCategory of ["Титулы", "Баннеры", "Значки", "Цвета"]) {
@@ -124,7 +139,7 @@ module.exports = {
         if (!group.length) continue;
         for (let i = 0; i < group.length; i += 5) {
           const chunk = group.slice(i, i + 5);
-          embed.addFields({
+          addPagedField({
             name: i === 0 ? CATEGORY_LABELS[itemCategory] : `Продолжение · ${CATEGORY_LABELS[itemCategory]} · ${i + 1}–${i + chunk.length}`,
             value: chunk.map(itemLine).join("\n\n"),
             inline: false,
@@ -134,29 +149,30 @@ module.exports = {
     } else if (items.length) {
       for (let i = 0; i < items.length; i += 5) {
         const group = items.slice(i, i + 5);
-        embed.addFields({
+        addPagedField({
           name: i === 0 ? CATEGORY_LABELS[category] || category : `Продолжение · ${i + 1}–${i + group.length}`,
           value: group.map(itemLine).join("\n\n").slice(0, 1024),
           inline: false,
         });
       }
     } else {
-      embed.addFields({ name: CATEGORY_LABELS[category] || category, value: "Пока здесь пусто — загляни позже." });
+      addPagedField({ name: CATEGORY_LABELS[category] || category, value: "Пока здесь пусто — загляни позже." });
     }
 
     if (banners.length) {
-      embed.addFields({
+      addPagedField({
         name: "🖼️ КОЛЛЕКЦИЯ ОФОРМЛЕНИЯ",
         value: "🌊 Бездна океана · 🌿 Изумрудная чаща · 🌅 Последний закат · 💠 Неоновый импульс\n❄️ Кристальный шторм · 🌌 Рождение галактики · 🌑 Тихая тень · 👑 Золотая династия\n\nКаждый баннер меняет всю атмосферу карточки профиля.",
         inline: false,
       });
     }
-    embed.addFields({
+    addPagedField({
       name: "🛒 КАК ЗАБРАТЬ ПРЕДМЕТ",
       value: "1. Скопируй ID из каталога.\n2. Используй `/buy item_id:<ID>`.\n3. Активируй через `/equip item_id:<ID>`.\n4. Проверь результат командой `/profile`.\n\n`/inventory` — твоя личная коллекция · `/daily` — ежедневные монеты.",
       inline: false,
-    }).setFooter({ text: "HeradeLegend Atelier · Твой профиль — твой стиль" });
+    });
+    embeds.push(embed);
 
-    await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
+    await interaction.reply({ embeds, flags: MessageFlags.Ephemeral });
   },
 };
