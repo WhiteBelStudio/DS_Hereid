@@ -347,10 +347,8 @@ module.exports = {
       if (section === "stats") {
         const members = interaction.guild.memberCount;
         const cases = db.prepare("SELECT COUNT(*) n FROM moderation_cases WHERE guild_id=?").get(interaction.guildId).n;
-        const tickets = db.prepare("SELECT COUNT(*) n FROM tickets WHERE guild_id=? AND status='open'").get(interaction.guildId).n;
         const embed = new EmbedBuilder().setColor(0x57f287).setTitle("📊 Статистика")
-          .addFields({name:"Участники сервера",value:String(members),inline:true},{name:"Случаи модерации",value:String(cases),inline:true},
-            {name:"Открытые тикеты",value:String(tickets),inline:true})
+          .addFields({name:"Участники сервера",value:String(members),inline:true},{name:"Случаи модерации",value:String(cases),inline:true})
           .setTimestamp();
         await interaction.reply({ embeds:[embed], components:[backRow()], flags:MessageFlags.Ephemeral }); return true;
       }

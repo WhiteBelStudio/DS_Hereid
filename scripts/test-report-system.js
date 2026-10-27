@@ -14,11 +14,9 @@ process.env.LOG_LEVEL = "error";
 async function run() {
   const db = require("../src/database");
   const reportCommand = require("../src/commands/report");
-  const ticketCommand = require("../src/tickets");
   const json = reportCommand.data.toJSON();
   assert.equal(json.name, "report");
   assert.deepEqual(json.options.map((item) => item.name), ["submit", "setup", "list", "resolve"]);
-  assert.equal(ticketCommand.data.toJSON().name, "ticket");
   assert.ok(db.prepare("PRAGMA table_info(guild_settings)").all().some((column) => column.name === "report_channel_id"));
   assert.equal(db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='reports'").get()?.name, "reports");
 
