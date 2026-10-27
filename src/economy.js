@@ -33,10 +33,10 @@ const CATALOG = Object.freeze([
   { id: "banner_forest", name: "Баннер «Изумрудная чаща»", category: "Баннеры", description: "Изумрудный туман, светлячки и древний лес.", price: 1100, type: "banner", value: "Лес" },
   { id: "banner_sunset", name: "Баннер «Последний закат»", category: "Баннеры", description: "Горизонт в огненных оттенках и мягкое сияние.", price: 1250, type: "banner", value: "Закат" },
   { id: "banner_neon", name: "Баннер «Неоновый импульс»", category: "Баннеры", description: "Киберпанк-линии, электрический свет и глубина.", price: 1800, type: "banner", value: "Неон" },
-  { id: "banner_galaxy", name: "Баннер «Рождение галактики»", category: "Баннеры", description: "Космическая туманность, звёздная пыль и орбиты.", price: 2800, type: "banner", value: "Галактика" },
-  { id: "banner_gold", name: "Баннер «Золотая династия»", category: "Баннеры", description: "Тёмный шёлк, золотая пыль и царственное сияние.", price: 4200, type: "banner", value: "Золото" },
   { id: "banner_ice", name: "Баннер «Кристальный шторм»", category: "Баннеры", description: "Ледяные кристаллы и холодное северное сияние.", price: 2200, type: "banner", value: "Лёд" },
+  { id: "banner_galaxy", name: "Баннер «Рождение галактики»", category: "Баннеры", description: "Космическая туманность, звёздная пыль и орбиты.", price: 2800, type: "banner", value: "Галактика" },
   { id: "banner_shadow", name: "Баннер «Тихая тень»", category: "Баннеры", description: "Графитовая дымка, глубокие тени и серебряные акценты.", price: 3500, type: "banner", value: "Тень" },
+  { id: "banner_gold", name: "Баннер «Золотая династия»", category: "Баннеры", description: "Тёмный шёлк, золотая пыль и царственное сияние.", price: 4200, type: "banner", value: "Золото" },
 
   // Цвета профиля
   { id: "color_blue", name: "Цвет «Синий»", category: "Цвета", description: "Синий цвет карточки профиля.", price: 250, type: "color", value: "5865F2" },
