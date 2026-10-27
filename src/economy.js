@@ -28,15 +28,15 @@ const CATALOG = Object.freeze([
   { id: "badge_comet", name: "Значок «Комета»", category: "Значки", description: "Космический значок для профиля.", price: 750, type: "badge", value: "☄️" },
   { id: "badge_heart", name: "Значок «Сердце»", category: "Значки", description: "Небольшая деталь оформления.", price: 350, type: "badge", value: "💜" },
 
-  // Рамки
-  { id: "frame_ocean", name: "Рамка «Океан»", category: "Рамки", description: "Косметическая рамка профиля.", price: 500, type: "frame", value: "Океан" },
-  { id: "frame_forest", name: "Рамка «Лес»", category: "Рамки", description: "Зелёный природный стиль.", price: 650, type: "frame", value: "Лес" },
-  { id: "frame_sunset", name: "Рамка «Закат»", category: "Рамки", description: "Тёплые оттенки заката.", price: 750, type: "frame", value: "Закат" },
-  { id: "frame_neon", name: "Рамка «Неон»", category: "Рамки", description: "Неоновая рамка профиля.", price: 900, type: "frame", value: "Неон" },
-  { id: "frame_galaxy", name: "Рамка «Галактика»", category: "Рамки", description: "Космический стиль для профиля.", price: 1400, type: "frame", value: "Галактика" },
-  { id: "frame_gold", name: "Рамка «Золото»", category: "Рамки", description: "Премиальная золотая рамка.", price: 1800, type: "frame", value: "Золото" },
-  { id: "frame_ice", name: "Рамка «Лёд»", category: "Рамки", description: "Холодный ледяной стиль.", price: 1100, type: "frame", value: "Лёд" },
-  { id: "frame_shadow", name: "Рамка «Тень»", category: "Рамки", description: "Тёмное минималистичное оформление.", price: 1250, type: "frame", value: "Тень" },
+  // Баннеры профиля: индивидуальные художественные темы вместо рамок.
+  { id: "banner_ocean", name: "Баннер «Бездна океана»", category: "Баннеры", description: "Глубокая вода, бирюзовые лучи и морская дымка.", price: 900, type: "banner", value: "Океан" },
+  { id: "banner_forest", name: "Баннер «Изумрудная чаща»", category: "Баннеры", description: "Изумрудный туман, светлячки и древний лес.", price: 1100, type: "banner", value: "Лес" },
+  { id: "banner_sunset", name: "Баннер «Последний закат»", category: "Баннеры", description: "Горизонт в огненных оттенках и мягкое сияние.", price: 1250, type: "banner", value: "Закат" },
+  { id: "banner_neon", name: "Баннер «Неоновый импульс»", category: "Баннеры", description: "Киберпанк-линии, электрический свет и глубина.", price: 1800, type: "banner", value: "Неон" },
+  { id: "banner_galaxy", name: "Баннер «Рождение галактики»", category: "Баннеры", description: "Космическая туманность, звёздная пыль и орбиты.", price: 2800, type: "banner", value: "Галактика" },
+  { id: "banner_gold", name: "Баннер «Золотая династия»", category: "Баннеры", description: "Тёмный шёлк, золотая пыль и царственное сияние.", price: 4200, type: "banner", value: "Золото" },
+  { id: "banner_ice", name: "Баннер «Кристальный шторм»", category: "Баннеры", description: "Ледяные кристаллы и холодное северное сияние.", price: 2200, type: "banner", value: "Лёд" },
+  { id: "banner_shadow", name: "Баннер «Тихая тень»", category: "Баннеры", description: "Графитовая дымка, глубокие тени и серебряные акценты.", price: 2400, type: "banner", value: "Тень" },
 
   // Цвета профиля
   { id: "color_blue", name: "Цвет «Синий»", category: "Цвета", description: "Синий цвет карточки профиля.", price: 250, type: "color", value: "5865F2" },
@@ -75,6 +75,7 @@ db.exec(`
     title_item_id TEXT,
     badge_item_id TEXT,
     frame_item_id TEXT,
+    banner_item_id TEXT,
     color_item_id TEXT,
     updated_at INTEGER NOT NULL,
     PRIMARY KEY (guild_id, user_id)
@@ -93,6 +94,18 @@ db.exec(`
 `);
 
 const itemById = new Map(CATALOG.map((item) => [item.id, item]));
+
+// Safe in-place migration: preserve ownership and equipped legacy frame cosmetics.
+const customProfileColumns = db.prepare("PRAGMA table_info(member_custom_profiles)").all().map((column) => column.name);
+if (!customProfileColumns.includes("banner_item_id")) db.exec("ALTER TABLE member_custom_profiles ADD COLUMN banner_item_id TEXT");
+const legacyBannerMap = { frame_ocean: "banner_ocean", frame_forest: "banner_forest", frame_sunset: "banner_sunset", frame_neon: "banner_neon", frame_galaxy: "banner_galaxy", frame_gold: "banner_gold", frame_ice: "banner_ice", frame_shadow: "banner_shadow" };
+const migrateLegacyBanners = db.transaction(() => {
+  for (const [legacyId, bannerId] of Object.entries(legacyBannerMap)) {
+    db.prepare("UPDATE economy_inventory SET item_id=? WHERE item_id=?").run(bannerId, legacyId);
+    db.prepare("UPDATE member_custom_profiles SET banner_item_id=?, frame_item_id=NULL WHERE frame_item_id=?").run(bannerId, legacyId);
+  }
+});
+migrateLegacyBanners();
 const ensureMember = db.prepare("INSERT INTO member_stats (guild_id,user_id) VALUES (?,?) ON CONFLICT(guild_id,user_id) DO NOTHING");
 const getBalanceStatement = db.prepare("SELECT balance, last_daily_at FROM member_stats WHERE guild_id=? AND user_id=?");
 const logTransaction = db.prepare("INSERT INTO economy_transactions (guild_id,user_id,actor_id,amount,kind,details,created_at) VALUES (?,?,?,?,?,?,?)");
@@ -214,11 +227,11 @@ function getInventory(guildId, userId) {
 }
 function getCustomProfile(guildId, userId) {
   const row = db.prepare("SELECT * FROM member_custom_profiles WHERE guild_id=? AND user_id=?").get(guildId,userId);
-  if (!row) return { title: null, badge: null, frame: null, color: null };
+  if (!row) return { title: null, badge: null, banner: null, color: null };
   return {
     title: row.title_item_id ? itemById.get(row.title_item_id) || null : null,
     badge: row.badge_item_id ? itemById.get(row.badge_item_id) || null : null,
-    frame: row.frame_item_id ? itemById.get(row.frame_item_id) || null : null,
+    banner: row.banner_item_id ? itemById.get(row.banner_item_id) || null : (row.frame_item_id ? itemById.get(row.frame_item_id) || null : null),
     color: row.color_item_id ? itemById.get(row.color_item_id) || null : null,
   };
 }
@@ -227,7 +240,7 @@ function equipItem(guildId, userId, itemId, now = Date.now()) {
   if (!item) return { ok: false, reason: "unknown_item" };
   const owned = db.prepare("SELECT 1 FROM economy_inventory WHERE guild_id=? AND user_id=? AND item_id=?").get(guildId,userId,itemId);
   if (!owned) return { ok: false, reason: "not_owned", item };
-  const column = ({ title: "title_item_id", badge: "badge_item_id", frame: "frame_item_id", color: "color_item_id" })[item.type];
+  const column = ({ title: "title_item_id", badge: "badge_item_id", banner: "banner_item_id", color: "color_item_id" })[item.type];
   const run = db.transaction(() => {
     db.prepare(`INSERT INTO member_custom_profiles (guild_id,user_id,${column},updated_at) VALUES (?,?,?,?) ON CONFLICT(guild_id,user_id) DO UPDATE SET ${column}=excluded.${column},updated_at=excluded.updated_at`)
       .run(guildId,userId,itemId,now);
@@ -236,7 +249,7 @@ function equipItem(guildId, userId, itemId, now = Date.now()) {
   return { ok: true, item, profile: getCustomProfile(guildId,userId) };
 }
 function removeEquipped(guildId, userId, type, now = Date.now()) {
-  const column = ({ title: "title_item_id", badge: "badge_item_id", frame: "frame_item_id", color: "color_item_id" })[type];
+  const column = ({ title: "title_item_id", badge: "badge_item_id", banner: "banner_item_id", color: "color_item_id" })[type];
   if (!column) return false;
   db.prepare(`UPDATE member_custom_profiles SET ${column}=NULL,updated_at=? WHERE guild_id=? AND user_id=?`).run(now,guildId,userId);
   return true;
