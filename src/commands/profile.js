@@ -1,6 +1,7 @@
-const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require("discord.js");
+const { SlashCommandBuilder, EmbedBuilder, AttachmentBuilder, MessageFlags } = require("discord.js");
 const { getProfile, levelForXp } = require("../member-profile");
 const { getCustomProfile, getInventory } = require("../economy");
+const { renderProfileCard } = require("../profile-card");
 
 const FRAME_STYLE = {
   Океан: { emoji: "🌊", label: "Океан" },
@@ -16,7 +17,7 @@ const FRAME_STYLE = {
 module.exports = {
   data: new SlashCommandBuilder()
     .setName("profile")
-    .setDescription("Посмотреть красивый профиль и прогресс участника.")
+    .setDescription("Посмотреть графическую карточку профиля и прогресс участника.")
     .addUserOption((option) => option
       .setName("member")
       .setDescription("Чей профиль посмотреть")
@@ -24,12 +25,10 @@ module.exports = {
 
   async execute(interaction) {
     if (!interaction.inGuild()) {
-      return interaction.reply({
-        content: "Профили доступны только на сервере.",
-        flags: MessageFlags.Ephemeral,
-      });
+      return interaction.reply({ content: "Профили доступны только на сервере.", flags: MessageFlags.Ephemeral });
     }
 
+    await interaction.deferReply();
     const user = interaction.options.getUser("member") || interaction.user;
     const member = await interaction.guild.members.fetch(user.id).catch(() => null);
     const profile = getProfile(interaction.guildId, user.id);
@@ -42,8 +41,6 @@ module.exports = {
     const progress = Math.max(0, Number(profile.xp) - base);
     const needed = Math.max(1, next - base);
     const percent = Math.min(100, Math.floor((progress / needed) * 100));
-    const filled = Math.min(12, Math.floor((progress / needed) * 12));
-    const bar = "🟪".repeat(filled) + "⬛".repeat(12 - filled);
     const color = custom.color ? Number.parseInt(custom.color.value, 16) : 0x5865f2;
     const frame = custom.frame ? FRAME_STYLE[custom.frame.value] : null;
     const badge = custom.badge?.value || "🌱";
@@ -52,54 +49,46 @@ module.exports = {
     const xp = Number(profile.xp || 0);
     const balance = Number(profile.balance || 0);
 
+    let imageBuffer;
+    try {
+      imageBuffer = await renderProfileCard({
+        user, displayName, title, badge, frame: custom.frame,
+        level, xp, balance, percent, inventoryCount: inventory.length,
+      });
+    } catch (error) {
+      console.error("[profile] Не удалось создать графическую карточку:", error);
+    }
+
     const embed = new EmbedBuilder()
       .setColor(Number.isFinite(color) ? color : 0x5865f2)
-      .setAuthor({
-        name: `${badge} ${displayName}  •  HERADELEGEND`,
-        iconURL: user.displayAvatarURL({ size: 128 }),
-      })
-      .setThumbnail(user.displayAvatarURL({ size: 512 }))
-      .setTitle(`${frame ? frame.emoji : "✨"}  ${title}`)
+      .setAuthor({ name: `${badge} ${displayName} • HERADELEGEND`, iconURL: user.displayAvatarURL({ size: 128 }) })
+      .setTitle(`${frame ? frame.emoji : "✨"} ${title}`)
       .setDescription([
         member ? `👤 **Участник:** ${member}` : "⚪ **Статус:** не состоит на сервере",
         frame ? `🎨 **Тема профиля:** ${frame.emoji} ${frame.label}` : "🎨 **Тема профиля:** классическая",
         "",
-        "━━━━━━━━━━━━━━━━━━━━",
         `**ПРОГРЕСС ДО УРОВНЯ ${level + 1}**`,
-        `${bar} **${percent}%**`,
+        `${"🟪".repeat(Math.min(12, Math.floor(percent / 100 * 12)))}${"⬛".repeat(12 - Math.min(12, Math.floor(percent / 100 * 12)))} **${percent}%**`,
         `${progress.toLocaleString("ru-RU")} / ${needed.toLocaleString("ru-RU")} XP до следующего уровня`,
       ].join("\n"))
       .addFields(
         { name: "🏆 УРОВЕНЬ", value: `**${level}**`, inline: true },
         { name: "✨ ОПЫТ", value: `**${xp.toLocaleString("ru-RU")} XP**`, inline: true },
         { name: "🪙 БАЛАНС", value: `**${balance.toLocaleString("ru-RU")}**`, inline: true },
-        {
-          name: "🪄 МОЁ ОФОРМЛЕНИЕ",
-          value: [
-            `**Титул:** ${custom.title?.value || "—"}`,
-            `**Значок:** ${custom.badge?.value || "—"}`,
-            `**Рамка:** ${custom.frame?.value || "—"}`,
-            `**Цвет:** ${custom.color?.name || "Стандартный"}`,
-          ].join("\n"),
-          inline: true,
-        },
-        {
-          name: "🎒 КОЛЛЕКЦИЯ",
-          value: [
-            `Предметов собрано: **${inventory.length}**`,
-            inventory.length ? "Меняй стиль когда захочешь." : "Собери свой уникальный стиль в магазине.",
-          ].join("\n"),
-          inline: true,
-        },
-        {
-          name: "🛍️ КАК ИЗМЕНИТЬ СТИЛЬ",
-          value: "Покупай предметы в **/shop**, смотри коллекцию в **/inventory**, применяй через **/equip**.",
-          inline: false,
-        },
+        { name: "🪄 МОЁ ОФОРМЛЕНИЕ", value: [`**Титул:** ${custom.title?.value || "—"}`, `**Значок:** ${custom.badge?.value || "—"}`, `**Баннер / рамка:** ${custom.frame?.value || "Классика"}`, `**Цвет:** ${custom.color?.name || "Стандартный"}`].join("\n"), inline: true },
+        { name: "🎒 КОЛЛЕКЦИЯ", value: `Предметов собрано: **${inventory.length}**\n${inventory.length ? "Меняй стиль когда захочешь." : "Собери свой стиль в /shop."}`, inline: true },
+        { name: "🛍️ ИЗМЕНИТЬ СТИЛЬ", value: "Покупай в **/shop**, смотри **/inventory**, применяй через **/equip**.", inline: false },
       )
       .setFooter({ text: "HeradeLegend • Твой профиль, твой стиль" })
       .setTimestamp();
 
-    await interaction.reply({ embeds: [embed] });
+    if (imageBuffer) {
+      const attachment = new AttachmentBuilder(imageBuffer, { name: "profile-card.png" });
+      embed.setImage("attachment://profile-card.png");
+      await interaction.editReply({ embeds: [embed], files: [attachment] });
+    } else {
+      embed.setThumbnail(user.displayAvatarURL({ size: 512 }));
+      await interaction.editReply({ embeds: [embed] });
+    }
   },
 };
