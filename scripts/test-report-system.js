@@ -53,6 +53,19 @@ async function run() {
   assert.equal(report.evidence_url, "https://example.com/evidence");
   assert.equal(db.prepare("SELECT COUNT(*) AS count FROM admin_audit WHERE action='report_created'").get().count, 1);
 
+  // A legacy or damaged audit table must not prevent the report itself from
+  // being stored and acknowledged to the user.
+  db.exec("DROP TABLE admin_audit");
+  const secondInteraction = {
+    ...interaction,
+    customId: "rp:submit:spam:none",
+    user: { id: "678901234567890123", tag: "reporter2#0001" },
+    reply: async (payload) => { secondInteraction.replyPayload = payload; },
+  };
+  assert.equal(await reportCommand.handleModal(secondInteraction), true);
+  assert.match(secondInteraction.replyPayload.content, /Репорт #2 отправлен персоналу/);
+  assert.equal(db.prepare("SELECT COUNT(*) AS count FROM reports WHERE guild_id=?").get(guildId).count, 2);
+
   const staffId = "567890123456789012";
   const resolveInteraction = {
     guildId, user: { id: staffId }, guild: { ownerId: staffId },
