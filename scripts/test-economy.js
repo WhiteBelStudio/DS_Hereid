@@ -58,13 +58,13 @@ try {
     assert.equal(economy.getBalance(guild, user).balance, before);
   });
   test("only owned items can be equipped", () => {
-    assert.equal(economy.equipItem(guild, user, "frame_neon").reason, "not_owned");
-    const bought = economy.buyItem(guild, user, "frame_neon", 4_000_003);
+    assert.equal(economy.equipItem(guild, user, "banner_neon").reason, "not_owned");
+    const bought = economy.buyItem(guild, user, "banner_neon", 4_000_003);
     assert.equal(bought.ok, true);
-    assert.equal(economy.equipItem(guild, user, "frame_neon", 4_000_004).ok, true);
-    assert.equal(economy.getCustomProfile(guild, user).frame.value, "Неон");
+    assert.equal(economy.equipItem(guild, user, "banner_neon", 4_000_004).ok, true);
+    assert.equal(economy.getCustomProfile(guild, user).banner.value, "Неон");
     assert.equal(economy.removeEquipped(guild, user, "frame"), true);
-    assert.equal(economy.getCustomProfile(guild, user).frame, null);
+    assert.equal(economy.getCustomProfile(guild, user).banner, null);
   });
   test("administrative balance adjustment is logged and cannot create negative balance", () => {
     const before = economy.getBalance(guild, user).balance;
