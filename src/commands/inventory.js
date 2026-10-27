@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require("discord.js");
-const { getInventory } = require("../economy");
+const { getInventory, getItemRarity, RARITY_ORDER } = require("../economy");
 const { economyDisabled } = require("../economy-access");
 module.exports = {
   data: new SlashCommandBuilder().setName("inventory").setDescription("Посмотреть купленные предметы.")

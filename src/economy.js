@@ -59,6 +59,39 @@ const CATALOG = Object.freeze([
   { id: "title_silent_storm", name: "Титул «Тихая буря»", category: "Титулы", description: "Спокойствие, за которым скрывается сила.", price: 2050, type: "title", value: "Тихая буря" },
   { id: "title_ultimate_herade", name: "Титул «Абсолют Herade»", category: "Титулы", description: "Эксклюзивный титул верхней ценовой категории.", price: 6500, type: "title", value: "Абсолют Herade" },
 
+  // Новая линейка титулов: редкость и цены согласованы для магазина.
+  { id: "title_joker", name: "Титул «Шутник»", category: "Титулы", description: "Для тех, кто умеет поднять настроение.", price: 150, type: "title", value: "Шутник", rarity: "Обычный" },
+  { id: "title_gamer", name: "Титул «Игрок»", category: "Титулы", description: "Для любителей игр и соревнований.", price: 200, type: "title", value: "Игрок", rarity: "Обычный" },
+  { id: "title_wanderer", name: "Титул «Странник»", category: "Титулы", description: "Сам выбирает путь и направление.", price: 250, type: "title", value: "Странник", rarity: "Обычный" },
+  { id: "title_spark", name: "Титул «Искра»", category: "Титулы", description: "Небольшой титул с ярким характером.", price: 300, type: "title", value: "Искра", rarity: "Обычный" },
+  { id: "title_moonlit", name: "Титул «Лунный»", category: "Титулы", description: "Для ценителей ночной атмосферы.", price: 350, type: "title", value: "Лунный", rarity: "Обычный" },
+  { id: "title_fox", name: "Титул «Хитрый лис»", category: "Титулы", description: "Находчивость — его главное преимущество.", price: 400, type: "title", value: "Хитрый лис", rarity: "Обычный" },
+  { id: "title_enigma", name: "Титул «Загадка»", category: "Титулы", description: "Не всё о нём известно с первого взгляда.", price: 500, type: "title", value: "Загадка", rarity: "Обычный" },
+
+  { id: "title_iceborn", name: "Титул «Ледяной»", category: "Титулы", description: "Холодная выдержка и спокойствие.", price: 750, type: "title", value: "Ледяной", rarity: "Редкий" },
+  { id: "title_eagle", name: "Титул «Орёл»", category: "Титулы", description: "Символ свободы и дальнего взгляда.", price: 850, type: "title", value: "Орёл", rarity: "Редкий" },
+  { id: "title_diamond", name: "Титул «Алмаз»", category: "Титулы", description: "Редкий блеск в коллекции профиля.", price: 950, type: "title", value: "Алмаз", rarity: "Редкий" },
+  { id: "title_cosmic_wanderer", name: "Титул «Космический странник»", category: "Титулы", description: "Путешественник среди звёзд.", price: 1100, type: "title", value: "Космический странник", rarity: "Редкий" },
+  { id: "title_sharpshooter", name: "Титул «Меткий»", category: "Титулы", description: "Всегда попадает точно в цель.", price: 1250, type: "title", value: "Меткий", rarity: "Редкий" },
+  { id: "title_observer", name: "Титул «Наблюдатель»", category: "Титулы", description: "Замечает то, что другие пропускают.", price: 1500, type: "title", value: "Наблюдатель", rarity: "Редкий" },
+
+  { id: "title_warrior", name: "Титул «Воин»", category: "Титулы", description: "Для тех, кто не отступает перед вызовами.", price: 2000, type: "title", value: "Воин", rarity: "Эпический" },
+  { id: "title_dark_mage", name: "Титул «Тёмный маг»", category: "Титулы", description: "Мрачная эстетика и загадочная сила.", price: 2300, type: "title", value: "Тёмный маг", rarity: "Эпический" },
+  { id: "title_stellar", name: "Титул «Звёздный»", category: "Титулы", description: "Для тех, кто стремится выше горизонта.", price: 2600, type: "title", value: "Звёздный", rarity: "Эпический" },
+  { id: "title_dragon", name: "Титул «Дракон»", category: "Титулы", description: "Мощный символ силы и характера.", price: 3000, type: "title", value: "Дракон", rarity: "Эпический" },
+  { id: "title_overlord", name: "Титул «Повелитель»", category: "Титулы", description: "Статусный титул высокой редкости.", price: 3500, type: "title", value: "Повелитель", rarity: "Эпический" },
+  { id: "title_dimension_keeper", name: "Титул «Хранитель измерений»", category: "Титулы", description: "Хранитель границ между мирами.", price: 4000, type: "title", value: "Хранитель измерений", rarity: "Эпический" },
+
+  { id: "title_emperor", name: "Титул «Император»", category: "Титулы", description: "Королевский титул для коллекции.", price: 6000, type: "title", value: "Император", rarity: "Легендарный" },
+  { id: "title_abyss_lord", name: "Титул «Владыка Бездны»", category: "Титулы", description: "Легендарный титул с тёмной атмосферой.", price: 7000, type: "title", value: "Владыка Бездны", rarity: "Легендарный" },
+  { id: "title_freedom_spirit", name: "Титул «Дух Свободы»", category: "Титулы", description: "Фирменный титул HERADE HOUSE 2.0.", price: 8500, type: "title", value: "Дух Свободы", rarity: "Легендарный" },
+  { id: "title_absolute", name: "Титул «Абсолют»", category: "Титулы", description: "Вершина легендарной коллекции.", price: 10000, type: "title", value: "Абсолют", rarity: "Легендарный" },
+
+  { id: "title_heavenly_archon", name: "Титул «Небесный архонт»", category: "Титулы", description: "Мифический титул небесной коллекции.", price: 15000, type: "title", value: "Небесный архонт", rarity: "Мифический" },
+  { id: "title_beyond_reality", name: "Титул «Вне реальности»", category: "Титулы", description: "Для тех, кто выходит за пределы привычного.", price: 22000, type: "title", value: "Вне реальности", rarity: "Мифический" },
+  { id: "title_absolute_legend", name: "Титул «Абсолютная легенда»", category: "Титулы", description: "Один из самых редких титулов магазина.", price: 25000, type: "title", value: "Абсолютная легенда", rarity: "Мифический" },
+  { id: "title_world_creator", name: "Титул «Создатель миров»", category: "Титулы", description: "Главный мифический титул каталога.", price: 30000, type: "title", value: "Создатель миров", rarity: "Мифический" },
+
   // Значки
   { id: "badge_star", name: "Значок «Звезда»", category: "Значки", description: "Значок рядом с оформлением профиля.", price: 300, type: "badge", value: "⭐" },
   { id: "badge_spark", name: "Значок «Искра»", category: "Значки", description: "Яркий значок для профиля.", price: 450, type: "badge", value: "✨" },
@@ -135,6 +168,19 @@ db.exec(`
 `);
 
 const itemById = new Map(CATALOG.map((item) => [item.id, item]));
+
+const RARITY_ORDER = Object.freeze(["Обычный", "Редкий", "Эпический", "Легендарный", "Мифический"]);
+function getItemRarity(itemOrId) {
+  const item = typeof itemOrId === "string" ? itemById.get(itemOrId) : itemOrId;
+  if (!item) return null;
+  if (item.rarity) return item.rarity;
+  if (item.price <= 500) return "Обычный";
+  if (item.price <= 1500) return "Редкий";
+  if (item.price <= 4000) return "Эпический";
+  if (item.price <= 10000) return "Легендарный";
+  return "Мифический";
+}
+
 
 // Safe in-place migration: preserve ownership and equipped legacy frame cosmetics.
 const customProfileColumns = db.prepare("PRAGMA table_info(member_custom_profiles)").all().map((column) => column.name);
@@ -342,4 +388,4 @@ function getTransactions(guildId, userId, limit = 10) {
   return db.prepare("SELECT amount,kind,details,created_at FROM economy_transactions WHERE guild_id=? AND user_id=? ORDER BY id DESC LIMIT ?")
     .all(guildId,userId,Math.min(25,Math.max(1,limit)));
 }
-module.exports = { DAILY_REWARD, DAILY_COOLDOWN_MS, DAILY_QUESTS, CATALOG, TRANSFER_FEE_PERCENT, MAX_TRANSFER_AMOUNT, getBalance, claimDaily, buyItem, getInventory, getCustomProfile, equipItem, removeEquipped, adjustBalance, transferCoins, getTransactions, getDailyQuests, recordQuestProgress, moscowDayKey };
+module.exports = { DAILY_REWARD, DAILY_COOLDOWN_MS, DAILY_QUESTS, CATALOG, RARITY_ORDER, getItemRarity, TRANSFER_FEE_PERCENT, MAX_TRANSFER_AMOUNT, getBalance, claimDaily, buyItem, getInventory, getCustomProfile, equipItem, removeEquipped, adjustBalance, transferCoins, getTransactions, getDailyQuests, recordQuestProgress, moscowDayKey };
