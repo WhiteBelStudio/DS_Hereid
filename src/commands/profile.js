@@ -3,7 +3,7 @@ const { getProfile, levelForXp } = require("../member-profile");
 const { getCustomProfile, getInventory } = require("../economy");
 const { renderProfileCard } = require("../profile-card");
 
-const FRAME_STYLE = {
+const BANNER_STYLE = {
   Океан: { emoji: "🌊", label: "Океан" },
   Лес: { emoji: "🌿", label: "Лес" },
   Закат: { emoji: "🌅", label: "Закат" },
@@ -42,7 +42,7 @@ module.exports = {
     const needed = Math.max(1, next - base);
     const percent = Math.min(100, Math.floor((progress / needed) * 100));
     const color = custom.color ? Number.parseInt(custom.color.value, 16) : 0x5865f2;
-    const frame = custom.frame ? FRAME_STYLE[custom.frame.value] : null;
+    const banner = custom.banner ? BANNER_STYLE[custom.banner.value] : null;
     const badge = custom.badge?.value || "🌱";
     const title = custom.title?.value || "Участник сообщества";
     const displayName = member?.displayName || user.globalName || user.username;
@@ -52,7 +52,7 @@ module.exports = {
     let imageBuffer;
     try {
       imageBuffer = await renderProfileCard({
-        user, displayName, title, badge, frame: custom.frame,
+        user, displayName, title, badge, banner: custom.banner,
         level, xp, balance, percent, inventoryCount: inventory.length,
       });
     } catch (error) {
@@ -62,10 +62,10 @@ module.exports = {
     const embed = new EmbedBuilder()
       .setColor(Number.isFinite(color) ? color : 0x5865f2)
       .setAuthor({ name: `${badge} ${displayName} • HERADELEGEND`, iconURL: user.displayAvatarURL({ size: 128 }) })
-      .setTitle(`${frame ? frame.emoji : "✨"} ${title}`)
+      .setTitle(`${banner ? banner.emoji : "✨"} ${title}`)
       .setDescription([
         member ? `👤 **Участник:** ${member}` : "⚪ **Статус:** не состоит на сервере",
-        frame ? `🎨 **Тема профиля:** ${frame.emoji} ${frame.label}` : "🎨 **Тема профиля:** классическая",
+        banner ? `🖼️ **Баннер:** ${banner.emoji} ${banner.label}` : "🖼️ **Баннер:** классический",
         "",
         `**ПРОГРЕСС ДО УРОВНЯ ${level + 1}**`,
         `${"🟪".repeat(Math.min(12, Math.floor(percent / 100 * 12)))}${"⬛".repeat(12 - Math.min(12, Math.floor(percent / 100 * 12)))} **${percent}%**`,
@@ -75,7 +75,7 @@ module.exports = {
         { name: "🏆 УРОВЕНЬ", value: `**${level}**`, inline: true },
         { name: "✨ ОПЫТ", value: `**${xp.toLocaleString("ru-RU")} XP**`, inline: true },
         { name: "🪙 БАЛАНС", value: `**${balance.toLocaleString("ru-RU")}**`, inline: true },
-        { name: "🪄 МОЁ ОФОРМЛЕНИЕ", value: [`**Титул:** ${custom.title?.value || "—"}`, `**Значок:** ${custom.badge?.value || "—"}`, `**Баннер / рамка:** ${custom.frame?.value || "Классика"}`, `**Цвет:** ${custom.color?.name || "Стандартный"}`].join("\n"), inline: true },
+        { name: "🪄 МОЁ ОФОРМЛЕНИЕ", value: [`**Титул:** ${custom.title?.value || "—"}`, `**Значок:** ${custom.badge?.value || "—"}`, `**Баннер:** ${custom.banner?.name || "Классика"}`, `**Цвет:** ${custom.color?.name || "Стандартный"}`].join("\n"), inline: true },
         { name: "🎒 КОЛЛЕКЦИЯ", value: `Предметов собрано: **${inventory.length}**\n${inventory.length ? "Меняй стиль когда захочешь." : "Собери свой стиль в /shop."}`, inline: true },
         { name: "🛍️ ИЗМЕНИТЬ СТИЛЬ", value: "Покупай в **/shop**, смотри **/inventory**, применяй через **/equip**.", inline: false },
       )
