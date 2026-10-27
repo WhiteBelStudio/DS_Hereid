@@ -117,7 +117,7 @@ function drawBannerArt(ctx, theme, width, height) {
 
 async function renderProfileCard({ user, displayName, title, badge, banner, level, xp, balance, percent, inventoryCount }) {
   const width = 1200;
-  const height = 600;
+  const height = 700;
   const bannerHeight = 230;
   const canvas = createCanvas(width, height);
   const ctx = canvas.getContext("2d");
@@ -176,26 +176,22 @@ async function renderProfileCard({ user, displayName, title, badge, banner, leve
   ctx.fillStyle = "#ffffff";
   ctx.font = `800 ${fitText(ctx, safeName, 810, 42)}px sans-serif`;
   ctx.fillText(safeName, 245, 302);
-  ctx.fillStyle = accent;
-  ctx.font = "600 24px sans-serif";
-  ctx.fillText(`${badge || "🌱"}  ${String(title || "Участник сообщества").slice(0, 34)}`, 248, 345);
-
-  // Level and progress panel.
+  // Level and progress panel comes before the title.
   ctx.fillStyle = "rgba(255,255,255,0.055)";
-  roundedRect(ctx, 245, 365, 900, 76, 16);
+  roundedRect(ctx, 245, 335, 900, 86, 16);
   ctx.fill();
   ctx.fillStyle = "#dce7ff";
   ctx.font = "600 19px sans-serif";
-  ctx.fillText(`LEVEL ${level}   •   ${Number(xp).toLocaleString("ru-RU")} XP`, 268, 395);
+  ctx.fillText(`УРОВЕНЬ ${level}   •   ${Number(xp).toLocaleString("ru-RU")} XP`, 268, 369);
   ctx.fillStyle = "rgba(255,255,255,0.15)";
-  roundedRect(ctx, 268, 410, 850, 12, 6);
+  roundedRect(ctx, 268, 387, 850, 12, 6);
   ctx.fill();
   const progressWidth = Math.max(8, 850 * Math.min(100, Math.max(0, percent)) / 100);
   const progressGradient = ctx.createLinearGradient(268, 0, 1118, 0);
   progressGradient.addColorStop(0, c2);
   progressGradient.addColorStop(1, accent);
   ctx.fillStyle = progressGradient;
-  roundedRect(ctx, 268, 410, progressWidth, 12, 6);
+  roundedRect(ctx, 268, 387, progressWidth, 12, 6);
   ctx.fill();
 
   const stats = [
@@ -206,19 +202,31 @@ async function renderProfileCard({ user, displayName, title, badge, banner, leve
   stats.forEach((stat, index) => {
     const x = 58 + index * 375;
     ctx.fillStyle = "rgba(255,255,255,0.055)";
-    roundedRect(ctx, x, 465, 350, 92, 16);
+    roundedRect(ctx, x, 445, 350, 92, 16);
     ctx.fill();
     ctx.fillStyle = accent;
     ctx.font = "600 16px sans-serif";
-    ctx.fillText(stat[0], x + 20, 493);
+    ctx.fillText(stat[0], x + 20, 473);
     ctx.fillStyle = "#ffffff";
     ctx.font = "700 26px sans-serif";
-    ctx.fillText(stat[1], x + 20, 531);
+    ctx.fillText(stat[1], x + 20, 511);
   });
+
+  // Show the custom title last, after the key profile stats.
+  ctx.fillStyle = "rgba(255,255,255,0.055)";
+  roundedRect(ctx, 58, 560, 1084, 92, 16);
+  ctx.fill();
+  ctx.fillStyle = accent;
+  ctx.font = "600 16px sans-serif";
+  ctx.fillText("ТИТУЛ УЧАСТНИКА", 80, 588);
+  ctx.fillStyle = "#ffffff";
+  const titleText = `${badge || "🌱"}  ${String(title || "Участник сообщества").slice(0, 34)}`;
+  ctx.font = `700 ${fitText(ctx, titleText, 1020, 28)}px sans-serif`;
+  ctx.fillText(titleText, 80, 625);
 
   // A crisp colored accent keeps each theme recognizable even on the card body.
   ctx.fillStyle = accent;
-  roundedRect(ctx, 58, 573, 1084, 4, 2);
+  roundedRect(ctx, 58, 675, 1084, 4, 2);
   ctx.fill();
   return canvas.toBuffer("image/png");
 }
