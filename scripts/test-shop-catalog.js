@@ -16,6 +16,7 @@ const shopCommand = require("../src/commands/shop");
 let passed = 0;
 function test(name, fn) { fn(); passed++; console.log(`[ OK ] ${name}`); }
 
+async function runTests() {
 try {
   test("catalog item IDs are unique and all prices are safe positive integers", () => {
     const ids = economy.CATALOG.map((item) => item.id);
@@ -98,3 +99,9 @@ try {
 } finally {
   fs.rmSync(tempDir, { recursive: true, force: true });
 }
+}
+
+runTests().catch((error) => {
+  console.error("[test-shop-catalog] Unhandled failure:", error);
+  process.exitCode = 1;
+});
