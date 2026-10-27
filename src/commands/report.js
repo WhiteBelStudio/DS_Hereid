@@ -12,6 +12,14 @@ const CATEGORIES = [
   { name: "Другое", value: "other", label: "Другое" },
 ];
 const STAFF_ROLE_NAMES = new Set(["CHIEF TECH ADMIN", "TECH ADMIN", "ADMINISTRATOR", "HEAD MODERATOR", "SUPPORT"]);
+// Public report feed requested by the server owner.
+const PUBLIC_REPORT_CHANNEL_ID = "1564742933872377907";
+
+async function fetchReportChannel(guild) {
+  if (!guild) return null;
+  const channel = await guild.channels.fetch(PUBLIC_REPORT_CHANNEL_ID).catch(() => null);
+  return channel && channel.isTextBased() && channel.isSendable() ? channel : null;
+}
 
 function isStaff(interaction) {
   if (!interaction.inGuild()) return false;
@@ -63,13 +71,9 @@ async function submitReport(interaction) {
   if (target && target.bot) return interaction.reply({ content: "Репорт на бота отправить нельзя. Сообщи о проблеме администрации сервера.", flags: MessageFlags.Ephemeral });
   if (target && target.id === interaction.user.id) return interaction.reply({ content: "Нельзя отправить репорт на самого себя.", flags: MessageFlags.Ephemeral });
 
-  const settings = db.prepare("SELECT report_channel_id FROM guild_settings WHERE guild_id=?").get(interaction.guildId);
-  if (!settings || !settings.report_channel_id) {
-    return interaction.reply({ content: "⚠️ Приём репортов ещё не настроен. Администрации нужно выполнить /report setup channel.", flags: MessageFlags.Ephemeral });
-  }
-  const channel = await interaction.guild.channels.fetch(settings.report_channel_id).catch(() => null);
-  if (!channel || !channel.isTextBased() || !channel.isSendable()) {
-    return interaction.reply({ content: "⚠️ Канал репортов недоступен. Попроси администрацию заново настроить /report setup channel.", flags: MessageFlags.Ephemeral });
+  const channel = await fetchReportChannel(interaction.guild);
+  if (!channel) {
+    return interaction.reply({ content: "⚠️ Не удалось открыть публичный канал репортов. Проверь, что канал существует и у бота есть права «Просмотр канала» и «Отправка сообщений».", flags: MessageFlags.Ephemeral });
   }
 
   const modal = new ModalBuilder().setCustomId("rp:submit:" + category + ":" + (target ? target.id : "none")).setTitle("Отправить репорт");
@@ -91,13 +95,16 @@ async function submitReport(interaction) {
 async function configureChannel(interaction) {
   if (!isStaff(interaction)) return interaction.reply({ content: "⛔ Настраивать репорты может только администрация и персонал поддержки.", flags: MessageFlags.Ephemeral });
   const channel = interaction.options.getChannel("channel", true);
+  if (channel.id !== PUBLIC_REPORT_CHANNEL_ID) {
+    return interaction.reply({ content: "ℹ️ Публичный канал репортов закреплён за <#" + PUBLIC_REPORT_CHANNEL_ID + ">. Выбери именно его — тогда все репорты будут публиковаться в одном месте.", flags: MessageFlags.Ephemeral });
+  }
   if (![ChannelType.GuildText, ChannelType.GuildAnnouncement].includes(channel.type) || !channel.isSendable()) {
     return interaction.reply({ content: "Выбери доступный текстовый канал.", flags: MessageFlags.Ephemeral });
   }
   db.prepare("INSERT INTO guild_settings (guild_id, report_channel_id) VALUES (?, ?) ON CONFLICT(guild_id) DO UPDATE SET report_channel_id=excluded.report_channel_id, updated_at=CURRENT_TIMESTAMP")
     .run(interaction.guildId, channel.id);
-  audit(interaction.guildId, interaction.user.id, "report_channel_configured", channel.id, "Канал репортов изменён");
-  return interaction.reply({ content: "✅ Канал репортов установлен: " + channel + ". Настрой его видимость только для персонала через разрешения Discord.", flags: MessageFlags.Ephemeral });
+  audit(interaction.guildId, interaction.user.id, "report_channel_configured", channel.id, "Публичный канал репортов подтверждён");
+  return interaction.reply({ content: "✅ Публичный канал репортов подтверждён: <#" + PUBLIC_REPORT_CHANNEL_ID + ">. Репорты будут видны участникам сервера.", flags: MessageFlags.Ephemeral });
 }
 
 async function listReports(interaction) {
@@ -125,9 +132,8 @@ async function resolveReport(interaction) {
   if (!update.changes) return interaction.reply({ content: "Репорт #" + id + " уже был рассмотрен другим модератором.", flags: MessageFlags.Ephemeral });
   audit(interaction.guildId, interaction.user.id, "report_resolved", id, resolution);
   const updated = db.prepare("SELECT * FROM reports WHERE id=?").get(id);
-  const settings = db.prepare("SELECT report_channel_id FROM guild_settings WHERE guild_id=?").get(interaction.guildId);
-  const channel = settings && settings.report_channel_id ? await interaction.guild.channels.fetch(settings.report_channel_id).catch(() => null) : null;
-  if (channel && channel.isTextBased() && channel.isSendable()) {
+  const channel = await fetchReportChannel(interaction.guild);
+  if (channel) {
     await channel.send({ embeds: [reportEmbed(updated)] }).catch((error) => interaction.client.logger?.warn?.("Could not post report resolution update: " + (error.message || error)));
   }
   const reporter = await interaction.client.users.fetch(report.reporter_id).catch(() => null);
@@ -171,8 +177,7 @@ async function handleModal(interaction) {
   const result = db.prepare("INSERT INTO reports (guild_id, reporter_id, target_id, category, description, evidence_url) VALUES (?, ?, ?, ?, ?, ?)")
     .run(interaction.guildId, interaction.user.id, targetId, category, description, evidenceUrl);
   const report = db.prepare("SELECT * FROM reports WHERE id=?").get(result.lastInsertRowid);
-  const settings = db.prepare("SELECT report_channel_id FROM guild_settings WHERE guild_id=?").get(interaction.guildId);
-  const channel = settings && settings.report_channel_id ? await interaction.guild.channels.fetch(settings.report_channel_id).catch(() => null) : null;
+  const channel = await fetchReportChannel(interaction.guild);
   let delivered = false;
   if (channel && channel.isTextBased() && channel.isSendable()) {
     try {
