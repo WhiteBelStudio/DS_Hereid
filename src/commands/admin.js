@@ -128,7 +128,7 @@ module.exports = {
       else await interaction.reply(payload);
       return true;
     }
-    if (interaction.isChannelSelectMenu() && id === "ha:music:channel") {
+    if (typeof interaction.isChannelSelectMenu === "function" && interaction.isChannelSelectMenu() && id === "ha:music:channel") {
       if (!allowed(interaction, "music")) { await interaction.reply({ content: "⛔ Нет доступа к управлению музыкой.", flags: MessageFlags.Ephemeral }); return true; }
       const channelId = interaction.values[0];
       const channel = await interaction.guild.channels.fetch(channelId).catch(() => null);
