@@ -44,7 +44,7 @@ async function searchTracks(query) {
       const results = await search();
       return (results || []).map((item) => {
         const url = item.url || item.permalink;
-        if (!url || !/^https?:\\/\\//i.test(url)) return null;
+        if (!url || !/^https?:\/\//i.test(url)) return null;
         return { title: titleOf(item), url, durationInSec: Number(item.durationInSec || item.duration) || 0, source };
       }).filter(Boolean);
     } catch (_) { return []; }
