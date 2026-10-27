@@ -19,7 +19,6 @@ db.exec(`
     goodbye_channel_id TEXT,
     mod_log_channel_id TEXT,
     report_channel_id TEXT,
-    ticket_category_id TEXT,
     welcome_message TEXT,
     goodbye_message TEXT,
     autorole_id TEXT,
@@ -44,21 +43,6 @@ db.exec(`
     reason TEXT,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   );
-  CREATE TABLE IF NOT EXISTS tickets (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    guild_id TEXT NOT NULL,
-    channel_id TEXT UNIQUE,
-    user_id TEXT NOT NULL,
-    status TEXT NOT NULL DEFAULT 'open',
-    category TEXT NOT NULL DEFAULT 'general',
-    initial_message TEXT,
-    assigned_to TEXT,
-    closed_by TEXT,
-    close_reason TEXT,
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    closed_at TEXT
-  );
   CREATE TABLE IF NOT EXISTS reports (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     guild_id TEXT NOT NULL,
@@ -73,16 +57,6 @@ db.exec(`
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     resolved_at TEXT
-  );
-  CREATE TABLE IF NOT EXISTS support_ticket_messages (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    ticket_id INTEGER NOT NULL,
-    guild_id TEXT NOT NULL,
-    author_id TEXT NOT NULL,
-    author_tag TEXT NOT NULL,
-    content TEXT NOT NULL,
-    message_id TEXT,
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   );
   CREATE TABLE IF NOT EXISTS admin_access_roles (
     guild_id TEXT NOT NULL,
@@ -174,21 +148,7 @@ db.exec(`
 
 const guildSettingsColumns = db.prepare("PRAGMA table_info(guild_settings)").all().map((column) => column.name);
 if (!guildSettingsColumns.includes("report_channel_id")) db.exec("ALTER TABLE guild_settings ADD COLUMN report_channel_id TEXT");
-const ticketColumns = db.prepare("PRAGMA table_info(tickets)").all().map((column) => column.name);
-for (const [name, definition] of [
-  ["category", "TEXT NOT NULL DEFAULT 'general'"],
-  ["initial_message", "TEXT"],
-  ["assigned_to", "TEXT"],
-  ["closed_by", "TEXT"],
-  ["close_reason", "TEXT"],
-  ["updated_at", "TEXT"],
-]) {
-  if (!ticketColumns.includes(name)) db.exec(`ALTER TABLE tickets ADD COLUMN ${name} ${definition}`);
-}
-db.exec("UPDATE tickets SET updated_at = COALESCE(updated_at, closed_at, created_at, CURRENT_TIMESTAMP) WHERE updated_at IS NULL");
-db.exec("CREATE INDEX IF NOT EXISTS idx_tickets_guild_status ON tickets(guild_id, status, id)");
 db.exec("CREATE INDEX IF NOT EXISTS idx_reports_guild_status ON reports(guild_id, status, id)");
-db.exec("CREATE INDEX IF NOT EXISTS idx_ticket_messages_ticket ON support_ticket_messages(ticket_id, id)");
 db.exec("CREATE INDEX IF NOT EXISTS idx_scheduled_tasks_due ON scheduled_tasks(status, scheduled_at)");
 db.exec("CREATE INDEX IF NOT EXISTS idx_scheduled_tasks_guild ON scheduled_tasks(guild_id, status, scheduled_at)");
 db.exec("CREATE INDEX IF NOT EXISTS idx_automod_terms_guild ON automod_terms(guild_id)");
