@@ -336,7 +336,7 @@ function equipItem(guildId, userId, itemId, now = Date.now()) {
   return { ok: true, item, profile: getCustomProfile(guildId,userId) };
 }
 function removeEquipped(guildId, userId, type, now = Date.now()) {
-  const column = ({ title: "title_item_id", badge: "badge_item_id", banner: "banner_item_id", color: "color_item_id" })[type];
+  const column = ({ title: "title_item_id", badge: "badge_item_id", banner: "banner_item_id", frame: "banner_item_id", color: "color_item_id" })[type];
   if (!column) return false;
   db.prepare(`UPDATE member_custom_profiles SET ${column}=NULL,updated_at=? WHERE guild_id=? AND user_id=?`).run(now,guildId,userId);
   return true;
