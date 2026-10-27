@@ -83,12 +83,11 @@ module.exports = {
       .setTimestamp();
 
     if (imageBuffer) {
-      // Send the graphic card as the primary response. Discord places embed images
-      // beneath embed text, so putting the PNG in an embed made the banner look "at the bottom".
-      // A standalone image attachment ensures the banner/card is the first thing members see.
+      // One Discord message: the image is attached to the same embed as all profile details.
+      // Keep the graphic banner at the top of the PNG itself; embed text and fields remain below it.
       const attachment = new AttachmentBuilder(imageBuffer, { name: "profile-card.png" });
-      await interaction.editReply({ content: "", files: [attachment], embeds: [] });
-      await interaction.followUp({ embeds: [embed] });
+      embed.setImage("attachment://profile-card.png");
+      await interaction.editReply({ embeds: [embed], files: [attachment] });
     } else {
       embed.setThumbnail(user.displayAvatarURL({ size: 512 }));
       await interaction.editReply({ embeds: [embed] });
