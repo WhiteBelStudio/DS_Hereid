@@ -7,6 +7,8 @@ const KIND_LABELS = {
   purchase: "🛍️ Покупка",
   admin_adjustment: "🛡️ Корректировка администратора",
   quest: "📜 Награда за задание",
+  transfer_sent: "📤 Перевод монет",
+  transfer_received: "📥 Получение монет",
 };
 
 function formatDate(timestamp) {
