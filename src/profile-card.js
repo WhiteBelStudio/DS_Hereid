@@ -1,16 +1,44 @@
-const { createCanvas, loadImage } = require("@napi-rs/canvas");
+const { createCanvas, loadImage, GlobalFonts } = require("@napi-rs/canvas");
+const assets = require("./profile-assets"); // баннеры и шрифты встроены прямо в код
+
+const SCALE = 1.5; // карточка рисуется в 1.5x — текст и баннер получаются чёткими
+
+let fontsReady = false;
+function ensureFonts() {
+  if (fontsReady) return;
+  fontsReady = true;
+  for (const [alias, data] of Object.entries(assets.fonts)) {
+    try { GlobalFonts.register(Buffer.from(data, "base64"), alias); }
+    catch (error) { console.warn(`[profile-card] Шрифт ${alias} не загружен:`, error.message); }
+  }
+}
+const font = (family, size) => `${size}px ${family}, HeradeEmoji, sans-serif`;
+
+// Готовые картинки баннеров. Если картинки нет — рисуем запасной вариант кодом.
+const bannerCache = new Map();
+async function getBannerImage(theme) {
+  if (!theme.file) return null;
+  if (bannerCache.has(theme.file)) return bannerCache.get(theme.file);
+  let image = null;
+  try {
+    const data = assets.banners[theme.file.replace(/\.jpg$/, "")];
+    if (data) image = await loadImage(Buffer.from(data, "base64"));
+  } catch (error) { console.warn(`[profile-card] Баннер ${theme.file} не загрузился, рисую запасной:`, error.message); }
+  bannerCache.set(theme.file, image);
+  return image;
+}
 
 const THEMES = {
-  "Океан": { colors: ["#03172d", "#087eaa", "#71e7f5"], label: "БЕЗДНА ОКЕАНА", motif: "ocean" },
-  "Лес": { colors: ["#061c17", "#147d52", "#8cf0b0"], label: "ИЗУМРУДНАЯ ЧАЩА", motif: "forest" },
-  "Закат": { colors: ["#35132e", "#c34b54", "#ffc27a"], label: "ПОСЛЕДНИЙ ЗАКАТ", motif: "sunset" },
-  "Неон": { colors: ["#130d35", "#672de0", "#5ef5ff"], label: "НЕОНОВЫЙ ИМПУЛЬС", motif: "neon" },
-  "Галактика": { colors: ["#100d2d", "#5536a6", "#f0a7ff"], label: "РОЖДЕНИЕ ГАЛАКТИКИ", motif: "galaxy" },
-  "Золото": { colors: ["#211506", "#98651a", "#ffe4a0"], label: "ЗОЛОТАЯ ДИНАСТИЯ", motif: "gold" },
-  "Лёд": { colors: ["#0b2037", "#387fba", "#d4f7ff"], label: "КРИСТАЛЬНЫЙ ШТОРМ", motif: "ice" },
-  "Тень": { colors: ["#080b14", "#343c54", "#a9b6d4"], label: "ТИХАЯ ТЕНЬ", motif: "shadow" },
+  "Океан": { file: "ocean.jpg", colors: ["#03172d", "#087eaa", "#71e7f5"], label: "БЕЗДНА ОКЕАНА", motif: "ocean" },
+  "Лес": { file: "forest.jpg", colors: ["#061c17", "#147d52", "#8cf0b0"], label: "ИЗУМРУДНАЯ ЧАЩА", motif: "forest" },
+  "Закат": { file: "sunset.jpg", colors: ["#35132e", "#c34b54", "#ffc27a"], label: "ПОСЛЕДНИЙ ЗАКАТ", motif: "sunset" },
+  "Неон": { file: "neon.jpg", colors: ["#130d35", "#672de0", "#5ef5ff"], label: "НЕОНОВЫЙ ИМПУЛЬС", motif: "neon" },
+  "Галактика": { file: "galaxy.jpg", colors: ["#100d2d", "#5536a6", "#f0a7ff"], label: "РОЖДЕНИЕ ГАЛАКТИКИ", motif: "galaxy" },
+  "Золото": { file: "gold.jpg", colors: ["#211506", "#98651a", "#ffe4a0"], label: "ЗОЛОТАЯ ДИНАСТИЯ", motif: "gold" },
+  "Лёд": { file: "ice.jpg", colors: ["#0b2037", "#387fba", "#d4f7ff"], label: "КРИСТАЛЬНЫЙ ШТОРМ", motif: "ice" },
+  "Тень": { file: "shadow.jpg", colors: ["#080b14", "#343c54", "#a9b6d4"], label: "ТИХАЯ ТЕНЬ", motif: "shadow" },
 };
-const DEFAULT_THEME = { colors: ["#101827", "#334b83", "#8ca9ff"], label: "КЛАССИЧЕСКИЙ БАННЕР", motif: "classic" };
+const DEFAULT_THEME = { file: "classic.jpg", colors: ["#101827", "#334b83", "#8ca9ff"], label: "КЛАССИЧЕСКИЙ БАННЕР", motif: "classic" };
 
 function roundedRect(ctx, x, y, w, h, r) {
   ctx.beginPath();
@@ -131,119 +159,212 @@ function drawBannerArt(ctx, theme, width, height) {
 }
 
 async function renderProfileCard({ user, displayName, title, badge, banner, level, xp, balance, percent, inventoryCount }) {
+  ensureFonts();
   const width = 1200;
   const height = 700;
   const bannerHeight = 230;
-  const canvas = createCanvas(width, height);
+  const canvas = createCanvas(width * SCALE, height * SCALE);
   const ctx = canvas.getContext("2d");
+  ctx.scale(SCALE, SCALE);
   const theme = THEMES[banner?.value] || DEFAULT_THEME;
   const [c1, c2, accent] = theme.colors;
 
-  // Card body and large custom artwork at the TOP of the profile.
-  ctx.fillStyle = "#0a1020";
-  roundedRect(ctx, 0, 0, width, height, 34);
-  ctx.fill();
+  // ── Фон карточки ──
   ctx.save();
-  roundedRect(ctx, 0, 0, width, bannerHeight + 22, 34);
+  roundedRect(ctx, 0, 0, width, height, 34);
   ctx.clip();
-  drawBannerArt(ctx, theme, width, bannerHeight);
-  ctx.restore();
+  const body = ctx.createLinearGradient(0, bannerHeight, 0, height);
+  body.addColorStop(0, "#0c1326");
+  body.addColorStop(1, "#070b17");
+  ctx.fillStyle = body;
+  ctx.fillRect(0, 0, width, height);
+  const bodyGlow = ctx.createRadialGradient(width * 0.85, height * 0.78, 10, width * 0.85, height * 0.78, 520);
+  bodyGlow.addColorStop(0, accent + "22");
+  bodyGlow.addColorStop(1, accent + "00");
+  ctx.fillStyle = bodyGlow;
+  ctx.fillRect(0, bannerHeight, width, height - bannerHeight);
 
-  // Top banner heading.
+  // ── Баннер (готовая картинка) ──
+  const bannerImage = await getBannerImage(theme);
+  if (bannerImage) {
+    ctx.drawImage(bannerImage, 0, 0, width, bannerHeight);
+    // затемнение слева, чтобы читался текст
+    const shade = ctx.createLinearGradient(0, 0, width * 0.66, 0);
+    shade.addColorStop(0, "rgba(0,0,0,0.62)");
+    shade.addColorStop(0.55, "rgba(0,0,0,0.22)");
+    shade.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = shade;
+    ctx.fillRect(0, 0, width, bannerHeight);
+  } else {
+    drawBannerArt(ctx, theme, width, bannerHeight);
+  }
+  // плавный переход баннера в тело карточки
+  const fade = ctx.createLinearGradient(0, bannerHeight - 46, 0, bannerHeight);
+  fade.addColorStop(0, "rgba(12,19,38,0)");
+  fade.addColorStop(1, "rgba(12,19,38,0.9)");
+  ctx.fillStyle = fade;
+  ctx.fillRect(0, bannerHeight - 46, width, 46);
+  // тонкая линия акцентного цвета под баннером
+  const edge = ctx.createLinearGradient(0, 0, width, 0);
+  edge.addColorStop(0, accent + "00");
+  edge.addColorStop(0.5, accent + "cc");
+  edge.addColorStop(1, accent + "00");
+  ctx.fillStyle = edge;
+  ctx.fillRect(0, bannerHeight - 1, width, 2);
+
+  // ── Надписи на баннере ──
   ctx.fillStyle = accent;
-  ctx.font = "700 18px sans-serif";
-  ctx.fillText("HERADELEGEND  /  PROFILE BANNER", 46, 48);
-  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(46, 32, 5, 22);
+  ctx.font = font("HeradeB", 17);
+  ctx.fillText("HERADELEGEND  /  PROFILE BANNER", 62, 49);
   const bannerTitle = banner ? theme.label : "КЛАССИЧЕСКИЙ БАННЕР";
-  ctx.font = `800 ${fitText(ctx, bannerTitle, 760, 40)}px sans-serif`;
-  ctx.fillText(bannerTitle, 46, 105);
-  ctx.fillStyle = "rgba(255,255,255,0.82)";
-  ctx.font = "500 18px sans-serif";
+  ctx.save();
+  ctx.shadowColor = "rgba(0,0,0,0.55)";
+  ctx.shadowBlur = 14;
+  ctx.shadowOffsetY = 3;
+  ctx.fillStyle = "#ffffff";
+  ctx.font = font("HeradeXB", fitSize(ctx, bannerTitle, 760, 46, "HeradeXB"));
+  ctx.fillText(bannerTitle, 46, 108);
+  ctx.restore();
+  ctx.fillStyle = "rgba(255,255,255,0.84)";
+  ctx.font = font("HeradeM", 17);
   ctx.fillText(banner ? "CUSTOM COSMETIC  •  EQUIPPED" : "YOUR PROFILE. YOUR STYLE.", 48, 140);
 
-  // Main profile content begins UNDER the banner.
-  const avatarX = 58, avatarY = 258, avatarSize = 150;
+  // ── Аватар (заходит на баннер) ──
+  const avatarSize = 150;
+  const avatarX = 58;
+  const avatarY = 168;
+  const acx = avatarX + avatarSize / 2;
+  const acy = avatarY + avatarSize / 2;
+  ctx.fillStyle = "#0c1326";
+  ctx.beginPath();
+  ctx.arc(acx, acy, avatarSize / 2 + 11, 0, Math.PI * 2);
+  ctx.fill();
   ctx.save();
   ctx.shadowColor = accent;
-  ctx.shadowBlur = 24;
+  ctx.shadowBlur = 26;
   ctx.strokeStyle = accent;
   ctx.lineWidth = 6;
   ctx.beginPath();
-  ctx.arc(avatarX + avatarSize / 2, avatarY + avatarSize / 2, avatarSize / 2 + 5, 0, Math.PI * 2);
+  ctx.arc(acx, acy, avatarSize / 2 + 4, 0, Math.PI * 2);
   ctx.stroke();
   ctx.restore();
   try {
     const avatar = await loadImage(user.displayAvatarURL({ extension: "png", size: 512 }));
     ctx.save();
     ctx.beginPath();
-    ctx.arc(avatarX + avatarSize / 2, avatarY + avatarSize / 2, avatarSize / 2, 0, Math.PI * 2);
+    ctx.arc(acx, acy, avatarSize / 2, 0, Math.PI * 2);
     ctx.clip();
     ctx.drawImage(avatar, avatarX, avatarY, avatarSize, avatarSize);
     ctx.restore();
   } catch {
     ctx.fillStyle = "#26334d";
     ctx.beginPath();
-    ctx.arc(avatarX + avatarSize / 2, avatarY + avatarSize / 2, avatarSize / 2, 0, Math.PI * 2);
+    ctx.arc(acx, acy, avatarSize / 2, 0, Math.PI * 2);
     ctx.fill();
   }
 
+  // ── Имя ──
   const safeName = String(displayName || user.username).slice(0, 32);
   ctx.fillStyle = "#ffffff";
-  ctx.font = `800 ${fitText(ctx, safeName, 810, 42)}px sans-serif`;
-  ctx.fillText(safeName, 245, 302);
-  // Level and progress panel comes before the title.
+  ctx.font = font("HeradeXB", fitSize(ctx, safeName, 880, 44, "HeradeXB"));
+  ctx.fillText(safeName, 245, 300);
+
+  // ── Уровень и прогресс ──
+  const pct = Math.min(100, Math.max(0, Number(percent) || 0));
   ctx.fillStyle = "rgba(255,255,255,0.055)";
-  roundedRect(ctx, 245, 335, 900, 86, 16);
+  roundedRect(ctx, 245, 332, 897, 92, 16);
   ctx.fill();
   ctx.fillStyle = "#dce7ff";
-  ctx.font = "600 19px sans-serif";
-  ctx.fillText(`УРОВЕНЬ ${level}   •   ${Number(xp).toLocaleString("ru-RU")} XP`, 268, 369);
-  ctx.fillStyle = "rgba(255,255,255,0.15)";
-  roundedRect(ctx, 268, 387, 850, 12, 6);
+  ctx.font = font("HeradeSB", 19);
+  ctx.fillText(`УРОВЕНЬ ${level}   •   ${Number(xp).toLocaleString("ru-RU")} XP`, 268, 367);
+  ctx.textAlign = "right";
+  ctx.fillStyle = accent;
+  ctx.font = font("HeradeB", 19);
+  ctx.fillText(`${pct}%`, 1118, 367);
+  ctx.textAlign = "left";
+  ctx.fillStyle = "rgba(255,255,255,0.14)";
+  roundedRect(ctx, 268, 384, 850, 14, 7);
   ctx.fill();
-  const progressWidth = Math.max(8, 850 * Math.min(100, Math.max(0, percent)) / 100);
+  const progressWidth = Math.max(14, 850 * pct / 100);
   const progressGradient = ctx.createLinearGradient(268, 0, 1118, 0);
   progressGradient.addColorStop(0, c2);
   progressGradient.addColorStop(1, accent);
+  ctx.save();
+  ctx.shadowColor = accent;
+  ctx.shadowBlur = 12;
   ctx.fillStyle = progressGradient;
-  roundedRect(ctx, 268, 387, progressWidth, 12, 6);
+  roundedRect(ctx, 268, 384, progressWidth, 14, 7);
   ctx.fill();
+  ctx.restore();
 
+  // ── Карточки статистики ──
   const stats = [
-    ["БАЛАНС", `🪙 ${Number(balance).toLocaleString("ru-RU")}`],
-    ["УРОВЕНЬ", String(level)],
-    ["КОЛЛЕКЦИЯ", String(inventoryCount)],
+    ["БАЛАНС", Number(balance).toLocaleString("ru-RU"), "coin"],
+    ["УРОВЕНЬ", String(level), null],
+    ["КОЛЛЕКЦИЯ", String(inventoryCount), null],
   ];
-  stats.forEach((stat, index) => {
+  stats.forEach(([label, value, icon], index) => {
     const x = 58 + index * 375;
     ctx.fillStyle = "rgba(255,255,255,0.055)";
-    roundedRect(ctx, x, 445, 350, 92, 16);
+    roundedRect(ctx, x, 448, 350, 92, 16);
     ctx.fill();
     ctx.fillStyle = accent;
-    ctx.font = "600 16px sans-serif";
-    ctx.fillText(stat[0], x + 20, 473);
+    ctx.font = font("HeradeB", 15);
+    ctx.fillText(label, x + 22, 477);
+    let textX = x + 22;
+    if (icon === "coin") {
+      const coin = ctx.createLinearGradient(0, 495, 0, 525);
+      coin.addColorStop(0, "#ffe9a0");
+      coin.addColorStop(1, "#d99a2a");
+      ctx.fillStyle = coin;
+      ctx.beginPath();
+      ctx.arc(x + 36, 510, 14, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "#a86e12";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(x + 36, 510, 9, 0, Math.PI * 2);
+      ctx.stroke();
+      textX = x + 62;
+    }
     ctx.fillStyle = "#ffffff";
-    ctx.font = "700 26px sans-serif";
-    ctx.fillText(stat[1], x + 20, 511);
+    ctx.font = font("HeradeXB", fitSize(ctx, value, 350 - (textX - x) - 20, 30, "HeradeXB"));
+    ctx.fillText(value, textX, 518);
   });
 
-  // Show the custom title last, after the key profile stats.
+  // ── Титул ──
   ctx.fillStyle = "rgba(255,255,255,0.055)";
-  roundedRect(ctx, 58, 560, 1084, 92, 16);
+  roundedRect(ctx, 58, 562, 1084, 92, 16);
   ctx.fill();
   ctx.fillStyle = accent;
-  ctx.font = "600 16px sans-serif";
-  ctx.fillText("ТИТУЛ УЧАСТНИКА", 80, 588);
+  ctx.font = font("HeradeB", 15);
+  ctx.fillText("ТИТУЛ УЧАСТНИКА", 80, 590);
   ctx.fillStyle = "#ffffff";
   const titleText = `${badge || "🌱"}  ${String(title || "Участник сообщества").slice(0, 34)}`;
-  ctx.font = `700 ${fitText(ctx, titleText, 1020, 28)}px sans-serif`;
-  ctx.fillText(titleText, 80, 625);
+  ctx.font = font("HeradeB", fitSize(ctx, titleText, 1020, 29, "HeradeB"));
+  ctx.fillText(titleText, 80, 630);
 
-  // A crisp colored accent keeps each theme recognizable even on the card body.
-  ctx.fillStyle = accent;
-  roundedRect(ctx, 58, 675, 1084, 4, 2);
+  // ── Акцентная полоса ──
+  const bar = ctx.createLinearGradient(58, 0, 1142, 0);
+  bar.addColorStop(0, c2);
+  bar.addColorStop(1, accent);
+  ctx.fillStyle = bar;
+  roundedRect(ctx, 58, 676, 1084, 4, 2);
   ctx.fill();
+
+  ctx.restore();
   return canvas.toBuffer("image/png");
+}
+
+function fitSize(ctx, text, maxWidth, startSize, family) {
+  let size = startSize;
+  while (size > 14) {
+    ctx.font = font(family, size);
+    if (ctx.measureText(text).width <= maxWidth) break;
+    size -= 1;
+  }
+  return size;
 }
 
 module.exports = { renderProfileCard, THEMES };
