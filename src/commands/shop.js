@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require("discord.js");
-const { CATALOG } = require("../economy");
+const { CATALOG, RARITY_ORDER, getItemRarity } = require("../economy");
 const { economyDisabled } = require("../economy-access");
 
 const CATEGORY_LABELS = {
@@ -9,26 +9,61 @@ const CATEGORY_LABELS = {
   Цвета: "🎨 ЦВЕТА ПРОФИЛЯ",
 };
 const ITEM_STYLE = {
-  // Редкости отражают ценность и цену баннеров в каталоге:
-  // редкие — стартовая коллекция, эпические — продвинутые темы,
-  // легендарный — космический баннер, мифический — главный эксклюзив.
-  banner_ocean: { emoji: "🌊", rarity: "РЕДКИЙ" },
-  banner_forest: { emoji: "🌿", rarity: "РЕДКИЙ" },
-  banner_sunset: { emoji: "🌅", rarity: "ЭПИЧЕСКИЙ" },
-  banner_neon: { emoji: "💠", rarity: "ЭПИЧЕСКИЙ" },
-  banner_ice: { emoji: "❄️", rarity: "ЭПИЧЕСКИЙ" },
-  banner_shadow: { emoji: "🌑", rarity: "ЛЕГЕНДАРНЫЙ" },
-  banner_galaxy: { emoji: "🌌", rarity: "ЛЕГЕНДАРНЫЙ" },
-  banner_gold: { emoji: "👑", rarity: "МИФИЧЕСКИЙ" },
+  title_joker: { emoji: "🃏" },
+  title_gamer: { emoji: "🎮" },
+  title_wanderer: { emoji: "🐾" },
+  title_spark: { emoji: "⚡" },
+  title_moonlit: { emoji: "🌙" },
+  title_fox: { emoji: "🦊" },
+  title_enigma: { emoji: "🎭" },
+  title_iceborn: { emoji: "🧊" },
+  title_eagle: { emoji: "🦅" },
+  title_diamond: { emoji: "💎" },
+  title_cosmic_wanderer: { emoji: "🌌" },
+  title_sharpshooter: { emoji: "🎯" },
+  title_observer: { emoji: "👁️" },
+  title_warrior: { emoji: "⚔️" },
+  title_dark_mage: { emoji: "🦇" },
+  title_stellar: { emoji: "🌠" },
+  title_dragon: { emoji: "🐉" },
+  title_overlord: { emoji: "🔮" },
+  title_dimension_keeper: { emoji: "🪬" },
+  title_emperor: { emoji: "👑" },
+  title_abyss_lord: { emoji: "🌑" },
+  title_freedom_spirit: { emoji: "🕊️" },
+  title_absolute: { emoji: "♛" },
+  title_heavenly_archon: { emoji: "🪽" },
+  title_beyond_reality: { emoji: "🪐" },
+  title_absolute_legend: { emoji: "💠" },
+  title_world_creator: { emoji: "🌌" },
+  banner_ocean: { emoji: "🌊" },
+  banner_forest: { emoji: "🌿" },
+  banner_sunset: { emoji: "🌅" },
+  banner_neon: { emoji: "💠" },
+  banner_ice: { emoji: "❄️" },
+  banner_shadow: { emoji: "🌑" },
+  banner_galaxy: { emoji: "🌌" },
+  banner_gold: { emoji: "👑" },
 };
+function sortCatalogItems(items) {
+  const categoryOrder = ["Титулы", "Баннеры", "Значки", "Цвета"];
+  return [...items].sort((a, b) => {
+    const categoryDifference = categoryOrder.indexOf(a.category) - categoryOrder.indexOf(b.category);
+    if (categoryDifference !== 0) return categoryDifference;
+    const rarityDifference = RARITY_ORDER.indexOf(getItemRarity(a)) - RARITY_ORDER.indexOf(getItemRarity(b));
+    if (rarityDifference !== 0) return rarityDifference;
+    return a.price - b.price || a.name.localeCompare(b.name, "ru");
+  });
+}
 function itemLine(item) {
   const style = ITEM_STYLE[item.id] || {};
   const icon = style.emoji || (item.type === "title" ? "🏷️" : item.type === "badge" ? "✨" : item.type === "color" ? "🎨" : "🖼️");
-  const rarity = style.rarity ? ` · ${style.rarity}` : "";
-  return `${icon} **${item.name}**${rarity}\n└ ${item.price.toLocaleString("ru-RU")} 🪙 · ID: \`${item.id}\``;
+  const rarity = getItemRarity(item);
+  return `${icon} **${item.name}** · ${rarity.toLocaleUpperCase("ru-RU")}\n└ ${item.price.toLocaleString("ru-RU")} 🪙 · ID: \`${item.id}\``;
 }
 
 module.exports = {
+  sortCatalogItems,
   data: new SlashCommandBuilder()
     .setName("shop")
     .setDescription("Открыть магазин оформления профиля.")
@@ -42,6 +77,17 @@ module.exports = {
         { name: "Значки", value: "Значки" },
         { name: "Кастомные баннеры", value: "Баннеры" },
         { name: "Цвета", value: "Цвета" },
+      ))
+    .addStringOption((option) => option
+      .setName("редкость")
+      .setDescription("Показать предметы выбранной редкости")
+      .setRequired(false)
+      .addChoices(
+        { name: "Обычные", value: "Обычный" },
+        { name: "Редкие", value: "Редкий" },
+        { name: "Эпические", value: "Эпический" },
+        { name: "Легендарные", value: "Легендарный" },
+        { name: "Мифические", value: "Мифический" },
       )),
 
   async execute(interaction) {
@@ -51,7 +97,11 @@ module.exports = {
     if (await economyDisabled(interaction)) return;
 
     const category = interaction.options.getString("категория") || "all";
-    const items = CATALOG.filter((item) => category === "all" || item.category === category);
+    const rarityFilter = interaction.options.getString("редкость");
+    const filtered = CATALOG.filter((item) =>
+      (category === "all" || item.category === category) &&
+      (!rarityFilter || getItemRarity(item) === rarityFilter));
+    const items = sortCatalogItems(filtered);
     const banners = items.filter((item) => item.category === "Баннеры");
     const embed = new EmbedBuilder()
       .setColor(0x7C5CFC)
@@ -64,11 +114,12 @@ module.exports = {
         "",
         "🪙 **Покупка навсегда** · предмет останется в коллекции.",
         "🎒 Купи предмет → примени через `/equip` → посмотри в `/profile`.",
+        rarityFilter ? `**Редкость:** ${rarityFilter}` : null,
         `**Предметов в разделе:** ${items.length}`,
-      ].join("\n"));
+      ].filter(Boolean).join("\n"));
 
     if (category === "all") {
-      for (const itemCategory of ["Баннеры", "Титулы", "Значки", "Цвета"]) {
+      for (const itemCategory of ["Титулы", "Баннеры", "Значки", "Цвета"]) {
         const group = items.filter((item) => item.category === itemCategory);
         if (!group.length) continue;
         for (let i = 0; i < group.length; i += 5) {
