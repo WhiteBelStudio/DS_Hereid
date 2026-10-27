@@ -94,7 +94,7 @@ async function run() {
   assert.equal(resolved.status, "resolved");
   assert.equal(resolved.resolution, "Проверено, обращение передано модерации.");
   assert.equal(resolved.handled_by, staffId);
-  assert.deepEqual(fetchedChannelIds, ["1564742933872377907", "1564742933872377907"]);
+  assert.deepEqual(fetchedChannelIds, ["1564742933872377907", "1564742933872377907", "1564742933872377907"]);
   assert.match(resolveInteraction.replyPayload.content, /отмечен как рассмотренный/);
   db.close();
   fs.rmSync(tempDir, { recursive: true, force: true });
