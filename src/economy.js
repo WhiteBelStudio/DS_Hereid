@@ -36,7 +36,7 @@ const CATALOG = Object.freeze([
   { id: "banner_galaxy", name: "Баннер «Рождение галактики»", category: "Баннеры", description: "Космическая туманность, звёздная пыль и орбиты.", price: 2800, type: "banner", value: "Галактика" },
   { id: "banner_gold", name: "Баннер «Золотая династия»", category: "Баннеры", description: "Тёмный шёлк, золотая пыль и царственное сияние.", price: 4200, type: "banner", value: "Золото" },
   { id: "banner_ice", name: "Баннер «Кристальный шторм»", category: "Баннеры", description: "Ледяные кристаллы и холодное северное сияние.", price: 2200, type: "banner", value: "Лёд" },
-  { id: "banner_shadow", name: "Баннер «Тихая тень»", category: "Баннеры", description: "Графитовая дымка, глубокие тени и серебряные акценты.", price: 2400, type: "banner", value: "Тень" },
+  { id: "banner_shadow", name: "Баннер «Тихая тень»", category: "Баннеры", description: "Графитовая дымка, глубокие тени и серебряные акценты.", price: 3500, type: "banner", value: "Тень" },
 
   // Цвета профиля
   { id: "color_blue", name: "Цвет «Синий»", category: "Цвета", description: "Синий цвет карточки профиля.", price: 250, type: "color", value: "5865F2" },
