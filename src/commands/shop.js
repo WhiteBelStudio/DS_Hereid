@@ -49,7 +49,7 @@ module.exports = {
 
     const category = interaction.options.getString("категория") || "all";
     const items = CATALOG.filter((item) => category === "all" || item.category === category);
-    const frames = items.filter((item) => item.category === "Баннеры");
+    const banners = items.filter((item) => item.category === "Баннеры");
     const embed = new EmbedBuilder()
       .setColor(0x7C5CFC)
       .setTitle("✦ HERADELEGEND · ATELIER")
@@ -87,7 +87,7 @@ module.exports = {
       embed.addFields({ name: CATEGORY_LABELS[category] || category, value: "Пока здесь пусто — загляни позже." });
     }
 
-    if (frames.length) {
+    if (banners.length) {
       embed.addFields({
         name: "🖼️ КОЛЛЕКЦИЯ ОФОРМЛЕНИЯ",
         value: "🌊 Бездна океана · 🌿 Изумрудная чаща · 🌅 Последний закат · 💠 Неоновый импульс\n🌌 Рождение галактики · 👑 Золотая династия · ❄️ Кристальный шторм · 🌑 Тихая тень\n\nКаждый баннер меняет всю атмосферу карточки профиля.",
