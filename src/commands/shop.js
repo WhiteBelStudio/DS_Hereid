@@ -9,6 +9,9 @@ const CATEGORY_LABELS = {
   Цвета: "🎨 ЦВЕТА ПРОФИЛЯ",
 };
 const ITEM_STYLE = {
+  // Редкости отражают ценность и цену баннеров в каталоге:
+  // редкие — стартовая коллекция, эпические — продвинутые темы,
+  // легендарный — космический баннер, мифический — главный эксклюзив.
   banner_ocean: { emoji: "🌊", rarity: "РЕДКИЙ" },
   banner_forest: { emoji: "🌿", rarity: "РЕДКИЙ" },
   banner_sunset: { emoji: "🌅", rarity: "ЭПИЧЕСКИЙ" },
@@ -16,7 +19,7 @@ const ITEM_STYLE = {
   banner_ice: { emoji: "❄️", rarity: "ЭПИЧЕСКИЙ" },
   banner_shadow: { emoji: "🌑", rarity: "ЭПИЧЕСКИЙ" },
   banner_galaxy: { emoji: "🌌", rarity: "ЛЕГЕНДАРНЫЙ" },
-  banner_gold: { emoji: "👑", rarity: "ЛЕГЕНДАРНЫЙ" },
+  banner_gold: { emoji: "👑", rarity: "МИФИЧЕСКИЙ" },
 };
 function itemLine(item) {
   const style = ITEM_STYLE[item.id] || {};
