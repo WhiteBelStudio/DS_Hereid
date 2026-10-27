@@ -5,18 +5,18 @@ const { economyDisabled } = require("../economy-access");
 const CATEGORY_LABELS = {
   Титулы: "🏷️ ТИТУЛЫ",
   Значки: "✨ ЗНАЧКИ",
-  Рамки: "🖼️ БАННЕРЫ И РАМКИ",
+  Баннеры: "🖼️ КАСТОМНЫЕ БАННЕРЫ",
   Цвета: "🎨 ЦВЕТА ПРОФИЛЯ",
 };
 const ITEM_STYLE = {
-  frame_ocean: { emoji: "🌊", rarity: "ОБЫЧНЫЙ" },
-  frame_forest: { emoji: "🌿", rarity: "ОБЫЧНЫЙ" },
-  frame_sunset: { emoji: "🌅", rarity: "ОБЫЧНЫЙ" },
-  frame_neon: { emoji: "💠", rarity: "РЕДКИЙ" },
-  frame_ice: { emoji: "❄️", rarity: "РЕДКИЙ" },
-  frame_shadow: { emoji: "🌑", rarity: "ЭПИЧЕСКИЙ" },
-  frame_galaxy: { emoji: "🌌", rarity: "ЭПИЧЕСКИЙ" },
-  frame_gold: { emoji: "👑", rarity: "ЛЕГЕНДАРНЫЙ" },
+  banner_ocean: { emoji: "🌊", rarity: "РЕДКИЙ" },
+  banner_forest: { emoji: "🌿", rarity: "РЕДКИЙ" },
+  banner_sunset: { emoji: "🌅", rarity: "ЭПИЧЕСКИЙ" },
+  banner_neon: { emoji: "💠", rarity: "ЭПИЧЕСКИЙ" },
+  banner_ice: { emoji: "❄️", rarity: "ЭПИЧЕСКИЙ" },
+  banner_shadow: { emoji: "🌑", rarity: "ЭПИЧЕСКИЙ" },
+  banner_galaxy: { emoji: "🌌", rarity: "ЛЕГЕНДАРНЫЙ" },
+  banner_gold: { emoji: "👑", rarity: "ЛЕГЕНДАРНЫЙ" },
 };
 function itemLine(item) {
   const style = ITEM_STYLE[item.id] || {};
@@ -37,7 +37,7 @@ module.exports = {
         { name: "Все предметы", value: "all" },
         { name: "Титулы", value: "Титулы" },
         { name: "Значки", value: "Значки" },
-        { name: "Баннеры и рамки", value: "Рамки" },
+        { name: "Кастомные баннеры", value: "Баннеры" },
         { name: "Цвета", value: "Цвета" },
       )),
 
@@ -49,7 +49,7 @@ module.exports = {
 
     const category = interaction.options.getString("категория") || "all";
     const items = CATALOG.filter((item) => category === "all" || item.category === category);
-    const frames = items.filter((item) => item.category === "Рамки");
+    const frames = items.filter((item) => item.category === "Баннеры");
     const embed = new EmbedBuilder()
       .setColor(0x7C5CFC)
       .setTitle("✦ HERADELEGEND · ATELIER")
@@ -65,7 +65,7 @@ module.exports = {
       ].join("\n"));
 
     if (category === "all") {
-      for (const itemCategory of ["Рамки", "Титулы", "Значки", "Цвета"]) {
+      for (const itemCategory of ["Баннеры", "Титулы", "Значки", "Цвета"]) {
         const group = items.filter((item) => item.category === itemCategory);
         if (!group.length) continue;
         embed.addFields({
@@ -90,7 +90,7 @@ module.exports = {
     if (frames.length) {
       embed.addFields({
         name: "🖼️ КОЛЛЕКЦИЯ ОФОРМЛЕНИЯ",
-        value: "🌊 Океан · 🌿 Лес · 🌅 Закат · 💠 Неон\n🌌 Галактика · 👑 Золото · ❄️ Лёд · 🌑 Тень\n\nКаждая тема имеет собственную палитру и уровень редкости.",
+        value: "🌊 Бездна океана · 🌿 Изумрудная чаща · 🌅 Последний закат · 💠 Неоновый импульс\n🌌 Рождение галактики · 👑 Золотая династия · ❄️ Кристальный шторм · 🌑 Тихая тень\n\nКаждый баннер меняет всю атмосферу карточки профиля.",
         inline: false,
       });
     }
