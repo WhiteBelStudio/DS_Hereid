@@ -2,16 +2,15 @@ const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require("discord.js"
 const { CATALOG } = require("../economy");
 const { economyDisabled } = require("../economy-access");
 
+const CATEGORY_ORDER = ["Титулы", "Баннеры", "Значки", "Цвета"];
 const CATEGORY_LABELS = {
   Титулы: "🏷️ ТИТУЛЫ",
-  Значки: "✨ ЗНАЧКИ",
   Баннеры: "🖼️ КАСТОМНЫЕ БАННЕРЫ",
+  Значки: "✨ ЗНАЧКИ",
   Цвета: "🎨 ЦВЕТА ПРОФИЛЯ",
 };
-const ITEM_STYLE = {
-  // Редкости отражают ценность и цену баннеров в каталоге:
-  // редкие — стартовая коллекция, эпические — продвинутые темы,
-  // легендарный — космический баннер, мифический — главный эксклюзив.
+const CATEGORY_EMOJI = { Титулы: "🏷️", Баннеры: "🖼️", Значки: "✨", Цвета: "🎨" };
+const BANNER_STYLE = {
   banner_ocean: { emoji: "🌊", rarity: "РЕДКИЙ" },
   banner_forest: { emoji: "🌿", rarity: "РЕДКИЙ" },
   banner_sunset: { emoji: "🌅", rarity: "ЭПИЧЕСКИЙ" },
@@ -21,11 +20,59 @@ const ITEM_STYLE = {
   banner_galaxy: { emoji: "🌌", rarity: "ЛЕГЕНДАРНЫЙ" },
   banner_gold: { emoji: "👑", rarity: "МИФИЧЕСКИЙ" },
 };
+
+function titleRarity(price) {
+  if (price <= 500) return "ОБЫЧНЫЙ";
+  if (price <= 1500) return "РЕДКИЙ";
+  if (price <= 3000) return "ЭПИЧЕСКИЙ";
+  if (price <= 5000) return "ЛЕГЕНДАРНЫЙ";
+  return "МИФИЧЕСКИЙ";
+}
+
 function itemLine(item) {
-  const style = ITEM_STYLE[item.id] || {};
-  const icon = style.emoji || (item.type === "title" ? "🏷️" : item.type === "badge" ? "✨" : item.type === "color" ? "🎨" : "🖼️");
-  const rarity = style.rarity ? ` · ${style.rarity}` : "";
-  return `${icon} **${item.name}**${rarity}\n└ ${item.price.toLocaleString("ru-RU")} 🪙 · ID: \`${item.id}\``;
+  const bannerStyle = BANNER_STYLE[item.id];
+  const rarity = bannerStyle?.rarity || (item.category === "Титулы" ? titleRarity(item.price) : "");
+  const icon = bannerStyle?.emoji || CATEGORY_EMOJI[item.category] || "🛍️";
+  const rarityLabel = rarity ? ` · ${rarity}` : "";
+  return `${icon} **${item.name}**${rarityLabel}\n└ **${item.price.toLocaleString("ru-RU")}** 🪙 · ID: ${item.id}`;
+}
+
+function makeCategoryEmbed(category, categoryItems, totalCount) {
+  const sortedItems = [...categoryItems].sort((a, b) =>
+    a.price - b.price || a.name.localeCompare(b.name, "ru"),
+  );
+  const embed = new EmbedBuilder()
+    .setColor(0x7C5CFC)
+    .setTitle(`✦ HERADE SHOP · ${CATEGORY_LABELS[category] || category.toUpperCase()}`)
+    .setDescription([
+      "╭━━━━━━━━━━━━━━━━━━━━╮",
+      "　**МАГАЗИН ПЕРСОНАЛИЗАЦИИ**",
+      "　Собери стиль, который узнают с первого взгляда.",
+      "╰━━━━━━━━━━━━━━━━━━━━╯",
+      "",
+      "🪙 Покупка навсегда · купленные предметы сохраняются в коллекции.",
+      "🎒 /buy — купить · /equip — применить · /profile — посмотреть.",
+      `**В этой категории:** ${sortedItems.length} · **Всего в магазине:** ${totalCount}`,
+      category === "Титулы" ? "Редкость титулов указана рядом с названием; товары отсортированы по цене." : "Товары отсортированы по цене от меньшей к большей.",
+    ].join("\n"))
+    .setFooter({ text: "HeradeLegend Atelier · Твой профиль — твой стиль" });
+
+  if (!sortedItems.length) {
+    embed.addFields({ name: CATEGORY_LABELS[category] || category, value: "Пока здесь пусто — загляни позже." });
+    return embed;
+  }
+
+  for (let i = 0; i < sortedItems.length; i += 5) {
+    const chunk = sortedItems.slice(i, i + 5);
+    embed.addFields({
+      name: i === 0
+        ? CATEGORY_LABELS[category] || category
+        : `Продолжение · ${i + 1}–${i + chunk.length}`,
+      value: chunk.map(itemLine).join("\n\n"),
+      inline: false,
+    });
+  }
+  return embed;
 }
 
 module.exports = {
@@ -39,8 +86,8 @@ module.exports = {
       .addChoices(
         { name: "Все предметы", value: "all" },
         { name: "Титулы", value: "Титулы" },
-        { name: "Значки", value: "Значки" },
         { name: "Кастомные баннеры", value: "Баннеры" },
+        { name: "Значки", value: "Значки" },
         { name: "Цвета", value: "Цвета" },
       )),
 
@@ -50,62 +97,21 @@ module.exports = {
     }
     if (await economyDisabled(interaction)) return;
 
-    const category = interaction.options.getString("категория") || "all";
-    const items = CATALOG.filter((item) => category === "all" || item.category === category);
-    const banners = items.filter((item) => item.category === "Баннеры");
-    const embed = new EmbedBuilder()
-      .setColor(0x7C5CFC)
-      .setTitle("✦ HERADELEGEND · ATELIER")
-      .setDescription([
-        "╭━━━━━━━━━━━━━━━━━━━━╮",
-        "　**МАГАЗИН ПЕРСОНАЛИЗАЦИИ**",
-        "　Собери стиль, который узнают с первого взгляда.",
-        "╰━━━━━━━━━━━━━━━━━━━━╯",
-        "",
-        "🪙 **Покупка навсегда** · предмет останется в коллекции.",
-        "🎒 Купи предмет → примени через `/equip` → посмотри в `/profile`.",
-        `**Предметов в разделе:** ${items.length}`,
-      ].join("\n"));
+    const requestedCategory = interaction.options.getString("категория") || "all";
+    const categories = requestedCategory === "all"
+      ? CATEGORY_ORDER
+      : CATEGORY_ORDER.filter((category) => category === requestedCategory);
+    const totalCount = CATALOG.length;
+    const embeds = categories.map((category) => makeCategoryEmbed(
+      category,
+      CATALOG.filter((item) => item.category === category),
+      totalCount,
+    ));
 
-    if (category === "all") {
-      for (const itemCategory of ["Баннеры", "Титулы", "Значки", "Цвета"]) {
-        const group = items.filter((item) => item.category === itemCategory);
-        if (!group.length) continue;
-        for (let i = 0; i < group.length; i += 5) {
-          const chunk = group.slice(i, i + 5);
-          embed.addFields({
-            name: i === 0 ? CATEGORY_LABELS[itemCategory] : `Продолжение · ${CATEGORY_LABELS[itemCategory]} · ${i + 1}–${i + chunk.length}`,
-            value: chunk.map(itemLine).join("\n\n"),
-            inline: false,
-          });
-        }
-      }
-    } else if (items.length) {
-      for (let i = 0; i < items.length; i += 5) {
-        const group = items.slice(i, i + 5);
-        embed.addFields({
-          name: i === 0 ? CATEGORY_LABELS[category] || category : `Продолжение · ${i + 1}–${i + group.length}`,
-          value: group.map(itemLine).join("\n\n").slice(0, 1024),
-          inline: false,
-        });
-      }
-    } else {
-      embed.addFields({ name: CATEGORY_LABELS[category] || category, value: "Пока здесь пусто — загляни позже." });
+    if (!embeds.length) {
+      return interaction.reply({ content: "Такой категории нет. Выбери раздел в команде /shop.", flags: MessageFlags.Ephemeral });
     }
 
-    if (banners.length) {
-      embed.addFields({
-        name: "🖼️ КОЛЛЕКЦИЯ ОФОРМЛЕНИЯ",
-        value: "🌊 Бездна океана · 🌿 Изумрудная чаща · 🌅 Последний закат · 💠 Неоновый импульс\n❄️ Кристальный шторм · 🌌 Рождение галактики · 🌑 Тихая тень · 👑 Золотая династия\n\nКаждый баннер меняет всю атмосферу карточки профиля.",
-        inline: false,
-      });
-    }
-    embed.addFields({
-      name: "🛒 КАК ЗАБРАТЬ ПРЕДМЕТ",
-      value: "1. Скопируй ID из каталога.\n2. Используй `/buy item_id:<ID>`.\n3. Активируй через `/equip item_id:<ID>`.\n4. Проверь результат командой `/profile`.\n\n`/inventory` — твоя личная коллекция · `/daily` — ежедневные монеты.",
-      inline: false,
-    }).setFooter({ text: "HeradeLegend Atelier · Твой профиль — твой стиль" });
-
-    await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
+    await interaction.reply({ embeds, flags: MessageFlags.Ephemeral });
   },
 };
