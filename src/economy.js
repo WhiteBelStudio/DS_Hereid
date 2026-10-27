@@ -267,8 +267,38 @@ function adjustBalance(guildId, userId, actorId, amount, reason = "Админи�
   });
   return run();
 }
+const TRANSFER_FEE_PERCENT = 5;
+const MAX_TRANSFER_AMOUNT = 1_000_000;
+function transferCoins(guildId, senderId, recipientId, amount, now = Date.now()) {
+  if (typeof guildId !== "string" || !guildId || typeof senderId !== "string" || !senderId || typeof recipientId !== "string" || !recipientId) {
+    return { ok: false, reason: "invalid_participants" };
+  }
+  if (senderId === recipientId) return { ok: false, reason: "self_transfer" };
+  if (!Number.isSafeInteger(amount) || amount < 1 || amount > MAX_TRANSFER_AMOUNT) {
+    return { ok: false, reason: "invalid_amount" };
+  }
+  // The requested amount is what the recipient receives; the sender pays it plus 5%.
+  const fee = Math.ceil(amount * TRANSFER_FEE_PERCENT / 100);
+  const total = amount + fee;
+  if (!Number.isSafeInteger(total)) return { ok: false, reason: "invalid_amount" };
+  const run = db.transaction(() => {
+    ensureMember.run(guildId, senderId);
+    ensureMember.run(guildId, recipientId);
+    const senderBalance = getBalance(guildId, senderId).balance;
+    if (senderBalance < total) return { ok: false, reason: "insufficient_funds", balance: senderBalance, amount, fee, total };
+    const debit = db.prepare("UPDATE member_stats SET balance=balance-? WHERE guild_id=? AND user_id=? AND balance>=?")
+      .run(total, guildId, senderId, total);
+    if (debit.changes !== 1) return { ok: false, reason: "insufficient_funds", balance: getBalance(guildId, senderId).balance, amount, fee, total };
+    db.prepare("UPDATE member_stats SET balance=balance+? WHERE guild_id=? AND user_id=?").run(amount, guildId, recipientId);
+    logTransaction.run(guildId, senderId, recipientId, -total, "transfer_sent", `Перевод участнику ${recipientId}; сумма ${amount}; комиссия ${fee}`, now);
+    logTransaction.run(guildId, recipientId, senderId, amount, "transfer_received", `Перевод от участника ${senderId}`, now);
+    return { ok: true, amount, fee, total, senderBalance: getBalance(guildId, senderId).balance, recipientBalance: getBalance(guildId, recipientId).balance };
+  });
+  return run();
+}
+
 function getTransactions(guildId, userId, limit = 10) {
   return db.prepare("SELECT amount,kind,details,created_at FROM economy_transactions WHERE guild_id=? AND user_id=? ORDER BY id DESC LIMIT ?")
     .all(guildId,userId,Math.min(25,Math.max(1,limit)));
 }
-module.exports = { DAILY_REWARD, DAILY_COOLDOWN_MS, DAILY_QUESTS, CATALOG, getBalance, claimDaily, buyItem, getInventory, getCustomProfile, equipItem, removeEquipped, adjustBalance, getTransactions, getDailyQuests, recordQuestProgress, moscowDayKey };
+module.exports = { DAILY_REWARD, DAILY_COOLDOWN_MS, DAILY_QUESTS, CATALOG, TRANSFER_FEE_PERCENT, MAX_TRANSFER_AMOUNT, getBalance, claimDaily, buyItem, getInventory, getCustomProfile, equipItem, removeEquipped, adjustBalance, transferCoins, getTransactions, getDailyQuests, recordQuestProgress, moscowDayKey };
