@@ -5,7 +5,7 @@ const { economyDisabled } = require("../economy-access");
 module.exports = {
   data: new SlashCommandBuilder()
     .setName("equip")
-    .setDescription("Применить купленный предмет к своему профилю.")
+    .setDescription("Применить купленный баннер или предмет оформления к профилю.")
     .addStringOption((option) => option
       .setName("item_id")
       .setDescription("ID предмета из /shop или /inventory")
@@ -17,7 +17,7 @@ module.exports = {
       .addChoices(
         { name: "Титул", value: "title" },
         { name: "Значок", value: "badge" },
-        { name: "Рамку", value: "frame" },
+        { name: "Баннер", value: "banner" },
         { name: "Цвет", value: "color" },
       )),
   async execute(interaction) {
@@ -40,8 +40,8 @@ module.exports = {
     }
     if (!itemId) {
       const profile = getCustomProfile(interaction.guildId, interaction.user.id);
-      const summary = ["title", "badge", "frame", "color"]
-        .map((type) => `**${type}:** ${profile[type]?.name || "не выбрано"}`)
+      const summary = ["title", "badge", "banner", "color"]
+        .map((type) => `**${type === "banner" ? "Баннер" : type}:** ${profile[type]?.name || "не выбрано"}`)
         .join("\n");
       return interaction.reply({
         content: `Текущее оформление профиля:\n${summary}`,
