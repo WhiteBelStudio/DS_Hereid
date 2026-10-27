@@ -105,6 +105,34 @@ try {
     assert.ok(rows.some(row => row.kind === "daily"));
     assert.ok(rows.some(row => row.kind === "quest"));
   });
+  test("/pay transfers coins atomically and charges 5 percent on top", () => {
+    const sender = "12345678901234573";
+    const recipient = "12345678901234574";
+    economy.adjustBalance(guild, sender, "12345678901234570", 1000, "test transfer funds", 5_000_000);
+    const sent = economy.transferCoins(guild, sender, recipient, 200, 5_000_001);
+    assert.equal(sent.ok, true);
+    assert.equal(sent.amount, 200);
+    assert.equal(sent.fee, 10);
+    assert.equal(sent.total, 210);
+    assert.equal(sent.senderBalance, 790);
+    assert.equal(sent.recipientBalance, 200);
+    const senderHistory = economy.getTransactions(guild, sender, 10);
+    const recipientHistory = economy.getTransactions(guild, recipient, 10);
+    assert.ok(senderHistory.some(row => row.kind === "transfer_sent" && row.amount === -210));
+    assert.ok(recipientHistory.some(row => row.kind === "transfer_received" && row.amount === 200));
+  });
+  test("/pay rejects self transfers, invalid amounts, and insufficient funds", () => {
+    const sender = "12345678901234575";
+    assert.equal(economy.transferCoins(guild, sender, sender, 10).reason, "self_transfer");
+    assert.equal(economy.transferCoins(guild, sender, "12345678901234576", 0).reason, "invalid_amount");
+    assert.equal(economy.transferCoins(guild, sender, "12345678901234576", 1).reason, "insufficient_funds");
+    assert.equal(economy.getBalance(guild, sender).balance, 0);
+  });
+  test("/pay slash command is registered", () => {
+    const payCommand = require("../src/commands/pay");
+    assert.equal(payCommand.data.toJSON().name, "pay");
+    assert.equal(typeof payCommand.execute, "function");
+  });
   test("daily quests command is registered with expected name", () => {
     assert.equal(questsCommand.data.toJSON().name, "quests");
     assert.equal(typeof questsCommand.execute, "function");
