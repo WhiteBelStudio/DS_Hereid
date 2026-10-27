@@ -65,6 +65,30 @@ try {
     assert.ok(optionNames.includes("редкость"));
     assert.equal(typeof shopCommand.execute, "function");
   });
+  await (async () => {
+    const payloads = [];
+    await shopCommand.execute({
+      inGuild: () => true,
+      guildId: process.env.GUILD_ID,
+      options: { getString: () => null },
+      reply: async (payload) => { payloads.push(payload); },
+    });
+    assert.equal(payloads.length, 1);
+    const embeds = payloads[0].embeds;
+    assert.ok(embeds.length > 1, "full catalog should paginate into multiple embeds");
+    assert.ok(embeds.length <= 10, "Discord allows at most 10 embeds per message");
+    for (const embed of embeds) {
+      const data = typeof embed.toJSON === "function" ? embed.toJSON() : embed;
+      const size = (data.title?.length || 0) +
+        (data.description?.length || 0) +
+        (data.footer?.text?.length || 0) +
+        (data.fields || []).reduce((sum, field) => sum + field.name.length + field.value.length, 0);
+      assert.ok(size <= 6000, `embed size ${size} exceeds Discord's 6000-character limit`);
+      assert.ok((data.fields || []).length <= 25, "embed has too many fields");
+    }
+    passed++;
+    console.log("[ OK ] /shop full catalog paginates within Discord embed limits");
+  })();
   db.close();
   console.log(`[test-shop-catalog] Passed: ${passed}`);
 } catch (error) {
