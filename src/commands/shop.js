@@ -95,6 +95,7 @@ module.exports = {
       return interaction.reply({ content: "Магазин доступен только на сервере.", flags: MessageFlags.Ephemeral });
     }
     if (await economyDisabled(interaction)) return;
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     const category = interaction.options.getString("категория") || "all";
     const rarityFilter = interaction.options.getString("редкость");
@@ -175,11 +176,14 @@ module.exports = {
         .sort((a, b) => a.price - b.price || a.name.localeCompare(b.name, "ru"))
         .map((item) => `${ITEM_STYLE[item.id]?.emoji || "🖼️"} ${item.name} — ${item.price.toLocaleString("ru-RU")} 🪙`)
         .join("\n");
-      addPagedField({
-        name: "🖼️ ПОДБОРКА БАННЕРОВ · ОТ ДОСТУПНЫХ К ПРЕМИАЛЬНЫМ",
-        value: `${bannerPreview}\n\nКаждый баннер меняет атмосферу карточки профиля.`,
-        inline: false,
-      });
+      const bannerLines = bannerPreview.split("\n");
+      for (let i = 0; i < bannerLines.length; i += 12) {
+        addPagedField({
+          name: i === 0 ? "🖼️ ПОДБОРКА БАННЕРОВ · ОТ ДОСТУПНЫХ К ПРЕМИАЛЬНЫМ" : "🖼️ ПОДБОРКА БАННЕРОВ · ПРОДОЛЖЕНИЕ",
+          value: bannerLines.slice(i, i + 12).join("\n") + (i + 12 >= bannerLines.length ? "\n\nКаждый баннер меняет атмосферу карточки профиля." : ""),
+          inline: false,
+        });
+      }
     }
     addPagedField({
       name: "🛒 КАК ЗАБРАТЬ ПРЕДМЕТ",
@@ -188,6 +192,11 @@ module.exports = {
     });
     embeds.push(embed);
 
-    await interaction.reply({ embeds, flags: MessageFlags.Ephemeral });
+    // Discord limits the combined embed text in a single message to 6000 characters.
+    // Send each catalog page as a separate ephemeral message to avoid MAX_EMBED_SIZE_EXCEEDED.
+    await interaction.editReply({ embeds: [embeds[0]] });
+    for (const page of embeds.slice(1)) {
+      await interaction.followUp({ embeds: [page], flags: MessageFlags.Ephemeral });
+    }
   },
 };
