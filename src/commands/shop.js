@@ -95,10 +95,25 @@ module.exports = {
       return interaction.reply({ content: "Магазин доступен только на сервере.", flags: MessageFlags.Ephemeral });
     }
     if (await economyDisabled(interaction)) return;
-    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-    const category = interaction.options.getString("категория") || "all";
+    const selectedCategory = interaction.options.getString("категория");
     const rarityFilter = interaction.options.getString("редкость");
+    if (!selectedCategory || !rarityFilter) {
+      return interaction.reply({
+        content: [
+          "🛍️ **Чтобы открыть магазин, укажи категорию и редкость.**",
+          "",
+          `• **Категория:** ${selectedCategory ? `выбрана «${selectedCategory}»` : "выбери «Титулы», «Значки», «Кастомные баннеры» или «Цвета»"}`,
+          `• **Редкость:** ${rarityFilter ? `выбрана «${rarityFilter}»` : "выбери «Обычные», «Редкие», «Эпические», «Легендарные» или «Мифические»"}`,
+          "",
+          "Выбери оба параметра в команде `/shop`, затем отправь её ещё раз.",
+        ].join("\\n"),
+        flags: MessageFlags.Ephemeral,
+      });
+    }
+
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+    const category = selectedCategory;
     const filtered = CATALOG.filter((item) =>
       (category === "all" || item.category === category) &&
       (!rarityFilter || getItemRarity(item) === rarityFilter));
