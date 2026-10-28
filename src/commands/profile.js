@@ -1,6 +1,6 @@
 const { SlashCommandBuilder, EmbedBuilder, AttachmentBuilder, MessageFlags } = require("discord.js");
 const { getProfile, levelForXp } = require("../member-profile");
-const { getCustomProfile, getInventory } = require("../economy");
+const { getCustomProfile, getInventory, getItemRarity } = require("../economy");
 const { renderProfileCard } = require("../profile-card");
 
 const BANNER_STYLE = {
@@ -52,8 +52,9 @@ module.exports = {
     let imageBuffer;
     try {
       imageBuffer = await renderProfileCard({
-        user, displayName, title, badge, banner: custom.banner,
+        user, displayName, title, titleRarity: custom.title ? getItemRarity(custom.title) : null, badge, banner: custom.banner,
         level, xp, balance, percent, inventoryCount: inventory.length,
+        joinedAt: member?.joinedTimestamp || null,
       });
     } catch (error) {
       console.error("[profile] Не удалось создать графическую карточку:", error);

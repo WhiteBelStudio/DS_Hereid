@@ -158,7 +158,29 @@ function drawBannerArt(ctx, theme, width, height) {
   ctx.fillRect(0, 0, width, height);
 }
 
-async function renderProfileCard({ user, displayName, title, badge, banner, level, xp, balance, percent, inventoryCount }) {
+// Цвета и оформление редкостей титулов
+const RARITY_STYLE = {
+  "Обычный":     { color: "#a9b8d0", glow: 0,  label: "ОБЫЧНЫЙ" },
+  "Редкий":      { color: "#4aa8ff", glow: 8,  label: "РЕДКИЙ" },
+  "Эпический":   { color: "#b46bff", glow: 14, label: "ЭПИЧЕСКИЙ" },
+  "Легендарный": { color: "#ffc24a", glow: 20, label: "ЛЕГЕНДАРНЫЙ" },
+  "Мифический":  { color: "#ff4fd8", glow: 26, label: "МИФИЧЕСКИЙ", color2: "#5ef5ff" },
+};
+
+// «3 д 5 ч», «2 г 40 д», «5 ч 12 мин»
+function formatTenure(ms) {
+  const minutes = Math.max(0, Math.floor(ms / 60000));
+  const days = Math.floor(minutes / 1440);
+  const hours = Math.floor((minutes % 1440) / 60);
+  if (days >= 365) {
+    const years = Math.floor(days / 365);
+    return `${years} г ${days - years * 365} д`;
+  }
+  if (days >= 1) return `${days} д ${hours} ч`;
+  return `${hours} ч ${minutes % 60} мин`;
+}
+
+async function renderProfileCard({ user, displayName, title, titleRarity, badge, banner, level, xp, balance, percent, inventoryCount, joinedAt }) {
   ensureFonts();
   const width = 1200;
   const height = 700;
@@ -229,6 +251,50 @@ async function renderProfileCard({ user, displayName, title, badge, banner, leve
   ctx.fillStyle = "rgba(255,255,255,0.84)";
   ctx.font = font("HeradeM", 17);
   ctx.fillText(banner ? "CUSTOM COSMETIC  •  EQUIPPED" : "YOUR PROFILE. YOUR STYLE.", 48, 140);
+
+  // ── Счётчик времени на сервере (правый нижний угол баннера) ──
+  const joined = Number(joinedAt);
+  if (Number.isFinite(joined) && joined > 0) {
+    const tenure = formatTenure(Date.now() - joined);
+    ctx.font = font("HeradeB", 12);
+    const labelW = ctx.measureText("НА СЕРВЕРЕ").width;
+    ctx.font = font("HeradeXB", 21);
+    const valueW = ctx.measureText(tenure).width;
+    const pillW = Math.ceil(Math.max(labelW, valueW)) + 66;
+    const pillH = 48;
+    const pillX = width - 40 - pillW;
+    const pillY = bannerHeight - pillH - 26;
+    ctx.save();
+    ctx.shadowColor = "rgba(0,0,0,0.55)";
+    ctx.shadowBlur = 16;
+    ctx.fillStyle = "rgba(6,10,22,0.58)";
+    roundedRect(ctx, pillX, pillY, pillW, pillH, 15);
+    ctx.fill();
+    ctx.restore();
+    ctx.strokeStyle = accent + "bb";
+    ctx.lineWidth = 1.5;
+    roundedRect(ctx, pillX, pillY, pillW, pillH, 15);
+    ctx.stroke();
+    // иконка часов
+    const ix = pillX + 28;
+    const iy = pillY + pillH / 2;
+    ctx.strokeStyle = accent;
+    ctx.lineWidth = 2.4;
+    ctx.beginPath();
+    ctx.arc(ix, iy, 11, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(ix, iy - 6);
+    ctx.lineTo(ix, iy);
+    ctx.lineTo(ix + 5, iy + 3);
+    ctx.stroke();
+    ctx.fillStyle = accent;
+    ctx.font = font("HeradeB", 12);
+    ctx.fillText("НА СЕРВЕРЕ", pillX + 52, pillY + 19);
+    ctx.fillStyle = "#ffffff";
+    ctx.font = font("HeradeXB", 21);
+    ctx.fillText(tenure, pillX + 52, pillY + 40);
+  }
 
   // ── Аватар (заходит на баннер) ──
   const avatarSize = 150;
@@ -333,17 +399,97 @@ async function renderProfileCard({ user, displayName, title, badge, banner, leve
     ctx.fillText(value, textX, 518);
   });
 
-  // ── Титул ──
+  // ── Титул (оформление по редкости) ──
+  const rar = RARITY_STYLE[titleRarity] || null;
+  const rc = rar ? rar.color : accent;
+  const panelX = 58, panelY = 562, panelW = 1084, panelH = 92;
   ctx.fillStyle = "rgba(255,255,255,0.055)";
-  roundedRect(ctx, 58, 562, 1084, 92, 16);
+  roundedRect(ctx, panelX, panelY, panelW, panelH, 16);
   ctx.fill();
-  ctx.fillStyle = accent;
+  if (rar) {
+    const tintGrad = ctx.createLinearGradient(panelX, 0, panelX + panelW, 0);
+    tintGrad.addColorStop(0, rc + "30");
+    tintGrad.addColorStop(0.6, rc + "0d");
+    tintGrad.addColorStop(1, (rar.color2 || rc) + "22");
+    ctx.fillStyle = tintGrad;
+    roundedRect(ctx, panelX, panelY, panelW, panelH, 16);
+    ctx.fill();
+    // рамка панели: чем выше редкость, тем ярче
+    ctx.save();
+    if (rar.glow) { ctx.shadowColor = rc; ctx.shadowBlur = rar.glow; }
+    const border = ctx.createLinearGradient(panelX, 0, panelX + panelW, 0);
+    border.addColorStop(0, rc);
+    border.addColorStop(1, rar.color2 || rc + "55");
+    ctx.strokeStyle = border;
+    ctx.lineWidth = rar.glow ? 2 : 1.4;
+    roundedRect(ctx, panelX + 1, panelY + 1, panelW - 2, panelH - 2, 16);
+    ctx.stroke();
+    ctx.restore();
+  }
+  // цветная планка слева
+  ctx.fillStyle = rc;
+  roundedRect(ctx, panelX + 14, panelY + 16, 5, panelH - 32, 2.5);
+  ctx.fill();
+  ctx.fillStyle = rc;
   ctx.font = font("HeradeB", 15);
-  ctx.fillText("ТИТУЛ УЧАСТНИКА", 80, 590);
+  ctx.fillText("ТИТУЛ УЧАСТНИКА", 92, 590);
+
+  // плашка редкости справа
+  let chipW = 0;
+  if (rar) {
+    ctx.font = font("HeradeXB", 16);
+    const textW = ctx.measureText(rar.label).width;
+    chipW = Math.ceil(textW) + 56;
+    const chipH = 36;
+    const chipX = panelX + panelW - 26 - chipW;
+    const chipY = panelY + (panelH - chipH) / 2;
+    if (rar.glow) {
+      // свечение только вокруг контура, чтобы не заливать текст внутри
+      ctx.save();
+      ctx.shadowColor = rc;
+      ctx.shadowBlur = rar.glow;
+      ctx.strokeStyle = rc;
+      ctx.lineWidth = 2;
+      roundedRect(ctx, chipX, chipY, chipW, chipH, 18);
+      ctx.stroke();
+      ctx.restore();
+    }
+    ctx.fillStyle = "#0b1224";
+    roundedRect(ctx, chipX, chipY, chipW, chipH, 18);
+    ctx.fill();
+    ctx.fillStyle = rc + "30";
+    roundedRect(ctx, chipX, chipY, chipW, chipH, 18);
+    ctx.fill();
+    ctx.strokeStyle = rc;
+    ctx.lineWidth = 1.8;
+    roundedRect(ctx, chipX, chipY, chipW, chipH, 18);
+    ctx.stroke();
+    // ромб-кристалл
+    const dx = chipX + 24, dy = chipY + chipH / 2;
+    ctx.fillStyle = rc;
+    ctx.beginPath();
+    ctx.moveTo(dx, dy - 7); ctx.lineTo(dx + 6, dy); ctx.lineTo(dx, dy + 7); ctx.lineTo(dx - 6, dy);
+    ctx.closePath();
+    ctx.fill();
+    let textFill = rc;
+    if (rar.color2) {
+      textFill = ctx.createLinearGradient(chipX, 0, chipX + chipW, 0);
+      textFill.addColorStop(0, rar.color);
+      textFill.addColorStop(1, rar.color2);
+    }
+    ctx.fillStyle = textFill;
+    ctx.font = font("HeradeXB", 16);
+    ctx.fillText(rar.label, chipX + 40, chipY + 24);
+  }
+
   ctx.fillStyle = "#ffffff";
-  const titleText = `${badge || "🌱"}  ${String(title || "Участник сообщества").slice(0, 34)}`;
-  ctx.font = font("HeradeB", fitSize(ctx, titleText, 1020, 29, "HeradeB"));
-  ctx.fillText(titleText, 80, 630);
+  const titleText = `${badge || "🌱"}  ${String(title || "Участник сообщества").slice(0, 40)}`;
+  const titleMax = 1084 - 92 + 58 - 40 - chipW - (chipW ? 30 : 0);
+  ctx.font = font("HeradeB", fitSize(ctx, titleText, titleMax, 30, "HeradeB"));
+  ctx.save();
+  if (rar && rar.glow) { ctx.shadowColor = rc; ctx.shadowBlur = Math.round(rar.glow / 2); }
+  ctx.fillText(titleText, 92, 632);
+  ctx.restore();
 
   // ── Акцентная полоса ──
   const bar = ctx.createLinearGradient(58, 0, 1142, 0);
