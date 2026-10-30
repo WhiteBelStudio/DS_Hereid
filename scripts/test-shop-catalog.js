@@ -72,10 +72,12 @@ try {
       inGuild: () => true,
       guildId: process.env.GUILD_ID,
       options: { getString: () => null },
-      reply: async (payload) => { payloads.push(payload); },
+      deferReply: async () => {},
+      editReply: async (payload) => { payloads.push(payload); },
+      followUp: async (payload) => { payloads.push(payload); },
     });
-    assert.equal(payloads.length, 1);
-    const embeds = payloads[0].embeds;
+    assert.ok(payloads.length >= 1, "shop should send at least one catalog page");
+    const embeds = payloads.flatMap((payload) => payload.embeds || []);
     assert.ok(embeds.length > 1, "full catalog should paginate into multiple embeds");
     assert.ok(embeds.length <= 10, "Discord allows at most 10 embeds per message");
     for (const embed of embeds) {

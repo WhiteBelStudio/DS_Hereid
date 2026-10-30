@@ -96,24 +96,11 @@ module.exports = {
     }
     if (await economyDisabled(interaction)) return;
 
-    const selectedCategory = interaction.options.getString("категория");
-    const rarityFilter = interaction.options.getString("редкость");
-    if (!selectedCategory || !rarityFilter) {
-      return interaction.reply({
-        content: [
-          "🛍️ **Чтобы открыть магазин, укажи категорию и редкость.**",
-          "",
-          `• **Категория:** ${selectedCategory ? `выбрана «${selectedCategory}»` : "выбери «Титулы», «Значки», «Кастомные баннеры» или «Цвета»"}`,
-          `• **Редкость:** ${rarityFilter ? `выбрана «${rarityFilter}»` : "выбери «Обычные», «Редкие», «Эпические», «Легендарные» или «Мифические»"}`,
-          "",
-          "Выбери оба параметра в команде `/shop`, затем отправь её ещё раз.",
-        ].join("\n"),
-        flags: MessageFlags.Ephemeral,
-      });
-    }
+    // Both filters are optional: opening /shop without options shows the full catalog.
+    const category = interaction.options.getString("категория") || "all";
+    const rarityFilter = interaction.options.getString("редкость") || null;
 
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-    const category = selectedCategory;
     const filtered = CATALOG.filter((item) =>
       (category === "all" || item.category === category) &&
       (!rarityFilter || getItemRarity(item) === rarityFilter));
