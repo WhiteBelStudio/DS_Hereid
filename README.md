@@ -12,7 +12,6 @@ Universal Discord community bot built with Node.js 22, discord.js 14 and SQLite 
 - Moderation actions: 10-minute timeout, kick and ban with required reason, hierarchy/permission checks, case history and optional mod-log channel.
 - Welcome/goodbye messages and automatic role assignment.
 - Repeated-message spam detection (log-only; no automatic deletion or punishment).
-- Music player with YouTube and SoundCloud search, interactive result selection, voice playback, queue, pause/resume, skip/stop, volume and repeat modes.
 
 ## Requirements and setup
 
@@ -25,7 +24,6 @@ Universal Discord community bot built with Node.js 22, discord.js 14 and SQLite 
 2. Optionally set `BOT_OWNER_IDS` to comma-separated Discord user IDs for bot owners.
 3. Install dependencies with `npm install`.
 4. Check JavaScript syntax with `npm run check`.
-5. Music playback dependencies are installed by `npm install`; allow voice UDP traffic on the host and grant the bot `Connect` and `Speak` in voice channels.
 5. Start with `npm start`. Slash commands are registered automatically when the bot connects.
 
 ## Pterodactyl
@@ -36,10 +34,6 @@ Universal Discord community bot built with Node.js 22, discord.js 14 and SQLite 
 - Set the environment variables in Pterodactyl's Variables panel; never commit `.env` or put the token in source.
 - Keep `DATABASE_PATH` pointed to persistent storage, default `./data/bot.sqlite`.
 - Follow `pterodactyl-startup.txt` for the full deployment procedure and troubleshooting steps.
-
-## Music player
-
-Use `/music play query:<title or artist>` to search YouTube and SoundCloud. Select a result with its button. Playback controls are `/music now`, `/music queue`, `/music pause`, `/music resume`, `/music skip`, `/music stop`, `/music volume percent:<0-100>`, and `/music repeat mode:<off|track|queue>`. The player queue is kept in memory and is reset when the bot restarts; the existing SQLite database is not used or modified by the music module. Provider availability can change, and Spotify is not used as an audio source.
 
 ## Admin panel
 
