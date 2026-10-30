@@ -52,15 +52,7 @@ module.exports = {
           ].join("\n")
         }
       );
-    embed.addFields({
-      name: "🎵 Музыкальный плеер",
-      value: [
-        "`/music play query:<название>` — поиск песни и выбор результата кнопкой.",
-        "`/music now` и `/music queue` — текущий трек и очередь.",
-        "`/music pause`, `/music resume`, `/music skip`, `/music stop` — управление.",
-        "`/music volume percent:<0–100>` и `/music repeat mode:<режим>` — громкость и повтор."
-      ].join("\n")
-    });
+
 
     if (adminView) {
       embed.addFields(

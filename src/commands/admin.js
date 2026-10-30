@@ -1,7 +1,7 @@
 const {
   SlashCommandBuilder, PermissionFlagsBits, ChannelType, MessageFlags, EmbedBuilder,
   ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder,
-  ModalBuilder, TextInputBuilder, TextInputStyle, ChannelSelectMenuBuilder,
+  ModalBuilder, TextInputBuilder, TextInputStyle,
 } = require("discord.js");
 const db = require("../database");
 const { FEATURES, isFeatureEnabled, setFeatureEnabled, listFeatures } = require("../features");
@@ -14,7 +14,6 @@ const SECTIONS = {
   stats: ["📊 Статистика", "Состояние сервера и активность."],
   logs: ["📜 Журнал аудита", "Последние действия администраторов."],
   features: ["🧩 Функции бота", "Состояние и включение обычных функций."],
-  music: ["🎵 Музыкальный плеер", "Управление плеером и закрепление за голосовым каналом."],
 };
 
 function audit(guildId, actorId, action, targetId = null, details = "") {
@@ -83,7 +82,6 @@ function mainRows() {
     ),
     new ActionRowBuilder().addComponents(
       new ButtonBuilder().setCustomId("ha:features").setLabel("Функции бота").setEmoji("🧩").setStyle(ButtonStyle.Success),
-      new ButtonBuilder().setCustomId("ha:music").setLabel("Музыка").setEmoji("🎵").setStyle(ButtonStyle.Primary),
     ),
   ];
 }
@@ -128,81 +126,9 @@ module.exports = {
       else await interaction.reply(payload);
       return true;
     }
-    if (typeof interaction.isChannelSelectMenu === "function" && interaction.isChannelSelectMenu() && id === "ha:music:channel") {
-      if (!allowed(interaction, "music")) { await interaction.reply({ content: "⛔ Нет доступа к управлению музыкой.", flags: MessageFlags.Ephemeral }); return true; }
-      const channelId = interaction.values[0];
-      const channel = await interaction.guild.channels.fetch(channelId).catch(() => null);
-      if (!channel || channel.type !== ChannelType.GuildVoice) { await interaction.reply({ content: "Выбери обычный голосовой канал.", flags: MessageFlags.Ephemeral }); return true; }
-      db.prepare("INSERT INTO music_settings (guild_id, voice_channel_id, updated_by) VALUES (?, ?, ?) ON CONFLICT(guild_id) DO UPDATE SET voice_channel_id=excluded.voice_channel_id, updated_by=excluded.updated_by, updated_at=CURRENT_TIMESTAMP").run(interaction.guildId, channelId, interaction.user.id);
-      const music = require("../music");
-      const session = music.getSession(interaction.guildId);
-      if (session && session.voiceChannelId !== channelId) music.stopSession(interaction.guildId);
-      audit(interaction.guildId, interaction.user.id, "music_channel_changed", channelId, channel.name);
-      await interaction.reply({ content: "✅ Музыка теперь разрешена только в канале <#" + channelId + ">. Сессия в другом войсе остановлена.", flags: MessageFlags.Ephemeral });
-      return true;
-    }
-    if (id === "ha:music" || id.startsWith("ha:music:")) {
-      if (!allowed(interaction, "music")) { await interaction.reply({ content: "⛔ Нет доступа к управлению музыкой.", flags: MessageFlags.Ephemeral }); return true; }
-      const music = require("../music");
-      music.ensureMusicSettings(interaction.guildId, interaction.user.id);
-      let current = music.getMusicSettings(interaction.guildId);
-      if (id === "ha:music:toggle") {
-        const enabled = !Boolean(current.enabled);
-        db.prepare("UPDATE music_settings SET enabled=?, updated_by=?, updated_at=CURRENT_TIMESTAMP WHERE guild_id=?").run(enabled ? 1 : 0, interaction.user.id, interaction.guildId);
-        if (!enabled) music.stopSession(interaction.guildId);
-        audit(interaction.guildId, interaction.user.id, "music_enabled_changed", null, enabled ? "enabled" : "disabled");
-      } else if (id === "ha:music:stop") {
-        music.stopSession(interaction.guildId);
-        audit(interaction.guildId, interaction.user.id, "music_stopped", null, "Admin panel");
-      } else if (id === "ha:music:clear-channel") {
-        db.prepare("UPDATE music_settings SET voice_channel_id=NULL, updated_by=?, updated_at=CURRENT_TIMESTAMP WHERE guild_id=?").run(interaction.user.id, interaction.guildId);
-        audit(interaction.guildId, interaction.user.id, "music_channel_cleared", null, "Any voice channel");
-      } else if (id === "ha:music:volume-down" || id === "ha:music:volume-up") {
-        const volume = Math.max(0, Math.min(100, Number(current.volume || 0) + (id.endsWith("up") ? 10 : -10)));
-        db.prepare("UPDATE music_settings SET volume=?, updated_by=?, updated_at=CURRENT_TIMESTAMP WHERE guild_id=?").run(volume, interaction.user.id, interaction.guildId);
-        const session = music.getSession(interaction.guildId);
-        if (session) { session.volume = volume; if (session.resource && session.resource.volume) session.resource.volume.setVolume(volume / 100); }
-        audit(interaction.guildId, interaction.user.id, "music_volume_changed", null, String(volume));
-      } else if (id === "ha:music:repeat") {
-        const mode = ({ off: "track", track: "queue", queue: "off" })[current.repeat_mode] || "off";
-        db.prepare("UPDATE music_settings SET repeat_mode=?, updated_by=?, updated_at=CURRENT_TIMESTAMP WHERE guild_id=?").run(mode, interaction.user.id, interaction.guildId);
-        const session = music.getSession(interaction.guildId);
-        if (session) session.repeat = mode;
-        audit(interaction.guildId, interaction.user.id, "music_repeat_changed", null, mode);
-      }
-      current = music.getMusicSettings(interaction.guildId);
-      const session = music.getSession(interaction.guildId);
-      const embed = new EmbedBuilder().setColor(current.enabled ? 0x57f287 : 0xed4245).setTitle("🎵 Управление музыкальным плеером")
-        .setDescription("Включай и отключай плеер, закрепляй его за одним голосовым каналом и управляй воспроизведением.")
-        .addFields(
-          { name: "Состояние", value: current.enabled ? "🟢 Включён" : "🔴 Отключён", inline: true },
-          { name: "Разрешённый войс", value: current.voice_channel_id ? "<#" + current.voice_channel_id + ">" : "Любой голосовой канал", inline: true },
-          { name: "Громкость", value: String(current.volume) + "%", inline: true },
-          { name: "Повтор", value: ({ off: "Выключен", track: "Трек", queue: "Очередь" })[current.repeat_mode] || "Выключен", inline: true },
-          { name: "Сейчас играет", value: session && session.current ? session.current.title.slice(0, 250) : "Ничего не играет", inline: true },
-          { name: "В очереди", value: String(session && session.queue ? session.queue.length : 0), inline: true }
-        ).setFooter({ text: "Настройки сохраняются в SQLite и действуют для этого сервера." });
-      const controls = [
-        new ActionRowBuilder().addComponents(
-          new ButtonBuilder().setCustomId("ha:music:toggle").setLabel(current.enabled ? "Отключить плеер" : "Включить плеер").setStyle(current.enabled ? ButtonStyle.Danger : ButtonStyle.Success),
-          new ButtonBuilder().setCustomId("ha:music:stop").setLabel("Остановить и очистить").setStyle(ButtonStyle.Danger),
-          new ButtonBuilder().setCustomId("ha:music:repeat").setLabel("Сменить повтор").setStyle(ButtonStyle.Secondary)
-        ),
-        new ActionRowBuilder().addComponents(
-          new ButtonBuilder().setCustomId("ha:music:volume-down").setLabel("Громкость −10").setStyle(ButtonStyle.Secondary),
-          new ButtonBuilder().setCustomId("ha:music:volume-up").setLabel("Громкость +10").setStyle(ButtonStyle.Secondary)
-        ),
-        new ActionRowBuilder().addComponents(
-          new ChannelSelectMenuBuilder().setCustomId("ha:music:channel").setPlaceholder("Выбрать разрешённый войс").setChannelTypes(ChannelType.GuildVoice).setMinValues(1).setMaxValues(1)
-        ),
-        new ActionRowBuilder().addComponents(
-          new ButtonBuilder().setCustomId("ha:music:clear-channel").setLabel("Разрешить любой войс").setStyle(ButtonStyle.Secondary),
-          new ButtonBuilder().setCustomId("ha:home").setLabel("Главная панель").setStyle(ButtonStyle.Secondary)
-        )
-      ];
-      const payload = { embeds: [embed], components: controls };
-      if (interaction.isButton()) await interaction.update(payload);
-      else await interaction.reply({ ...payload, flags: MessageFlags.Ephemeral });
+    // Acknowledge obsolete controls in already-sent admin panel messages.
+    if (id.startsWith("ha:music")) {
+      await interaction.reply({ content: "Музыкальный плеер удалён из HeradeLegend.", flags: MessageFlags.Ephemeral });
       return true;
     }
     if (id === "ha:features" || id.startsWith("ha:feature:toggle:")) {

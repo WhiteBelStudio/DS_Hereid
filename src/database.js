@@ -66,26 +66,6 @@ db.exec(`
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (guild_id, role_id, section)
   );
-  CREATE TABLE IF NOT EXISTS music_settings (guild_id TEXT PRIMARY KEY, enabled INTEGER NOT NULL DEFAULT 1 CHECK(enabled IN (0,1)), voice_channel_id TEXT, volume INTEGER NOT NULL DEFAULT 50 CHECK(volume BETWEEN 0 AND 100), repeat_mode TEXT NOT NULL DEFAULT 'off' CHECK(repeat_mode IN ('off','track','queue')), updated_by TEXT, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
-  CREATE TABLE IF NOT EXISTS music_playlists (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    guild_id TEXT NOT NULL,
-    owner_id TEXT NOT NULL,
-    name TEXT NOT NULL COLLATE NOCASE,
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(guild_id, owner_id, name)
-  );
-  CREATE TABLE IF NOT EXISTS music_playlist_tracks (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    playlist_id INTEGER NOT NULL REFERENCES music_playlists(id) ON DELETE CASCADE,
-    title TEXT NOT NULL,
-    url TEXT NOT NULL,
-    source TEXT NOT NULL,
-    duration_seconds INTEGER NOT NULL DEFAULT 0,
-    added_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-  );
-  CREATE INDEX IF NOT EXISTS idx_music_playlists_owner ON music_playlists(guild_id, owner_id, name);
-  CREATE INDEX IF NOT EXISTS idx_music_playlist_tracks_order ON music_playlist_tracks(playlist_id, id);
   CREATE TABLE IF NOT EXISTS guild_features (
     guild_id TEXT NOT NULL,
     feature_key TEXT NOT NULL,
