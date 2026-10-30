@@ -22,29 +22,33 @@ function test(name, fn) {
 }
 
 try {
-  test("eight ranks are ordered from NEWBIE to LEGEND", () => {
+  test("seven ranks are ordered from NEWBIE to LEGEND and GUEST is removed", () => {
     assert.deepEqual(RANKS.map((rank) => rank.name), [
-      "NEWBIE", "GUEST", "MEMBER", "ACTIVE", "VETERAN", "MASTER", "ELITE", "LEGEND",
+      "NEWBIE", "MEMBER", "ACTIVE", "VETERAN", "MASTER", "ELITE", "LEGEND",
     ]);
+    assert.equal(RANKS.some((rank) => rank.name === "GUEST"), false);
   });
 
-  test("NEWBIE is the default and GUEST requires two days and twenty messages", () => {
+  test("MEMBER requires 7 days, 250 messages, 2 active days, and 1 voice hour", () => {
     const now = Date.now();
-    const row = { joined_at: now - 2 * DAY, message_count: 19, active_days: 1, voice_seconds: 0, voice_started_at: null, last_activity_at: now };
-    assert.equal(rankIndexFor(row, now), 0);
-    assert.equal(rankIndexFor({ ...row, message_count: 20 }, now), 1);
+    const base = { joined_at: now - 7 * DAY, message_count: 250, active_days: 2, voice_seconds: 3600, voice_started_at: null, last_activity_at: now };
+    assert.equal(rankIndexFor({ ...base, joined_at: now - 6 * DAY }, now), 0);
+    assert.equal(rankIndexFor({ ...base, message_count: 249 }, now), 0);
+    assert.equal(rankIndexFor({ ...base, active_days: 1 }, now), 0);
+    assert.equal(rankIndexFor({ ...base, voice_seconds: 3599 }, now), 0);
+    assert.equal(rankIndexFor(base, now), 1);
   });
 
   test("higher ranks require sufficient voice time", () => {
     const now = Date.now();
     const row = { joined_at: now - 30 * DAY, message_count: 800, active_days: 10, voice_seconds: 5 * HOUR - 1, voice_started_at: null, last_activity_at: now };
-    assert.equal(rankIndexFor(row, now), 3);
-    assert.equal(rankIndexFor({ ...row, voice_seconds: 5 * HOUR }, now), 4);
+    assert.equal(rankIndexFor(row, now), 2);
+    assert.equal(rankIndexFor({ ...row, voice_seconds: 5 * HOUR }, now), 3);
   });
 
   test("LEGEND requires all duration, message, active-day, and voice thresholds", () => {
     const now = Date.now();
-    const row = { joined_at: now - 180 * DAY, message_count: 10000, active_days: 60, voice_seconds: 60 * HOUR, voice_started_at: null, last_activity_at: now };
+    const row = { joined_at: now - 180 * DAY, message_count: 10000, active_days: 60, voice_seconds: 40 * HOUR, voice_started_at: null, last_activity_at: now };
     assert.equal(rankIndexFor(row, now), 7);
     assert.equal(rankIndexFor({ ...row, voice_seconds: 60 * HOUR - 1 }, now), 6);
     assert.equal(snapshot({ ...row, joined_at: now }, now).days, 0);
