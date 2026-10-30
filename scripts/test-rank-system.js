@@ -46,11 +46,35 @@ try {
     assert.equal(rankIndexFor({ ...row, voice_seconds: 5 * HOUR }, now), 3);
   });
 
+  test("all configured rank thresholds match the approved table", () => {
+    const now = Date.now();
+    const expected = [
+      ["NEWBIE", 0, 0, 0, 0, 0],
+      ["MEMBER", 7, 250, 2, 1, 1],
+      ["ACTIVE", 10, 300, 5, 2, 2],
+      ["VETERAN", 21, 800, 10, 5, 3],
+      ["MASTER", 45, 2000, 20, 10, 4],
+      ["ELITE", 90, 4500, 35, 20, 5],
+      ["LEGEND", 180, 10000, 60, 40, 6],
+    ];
+    for (const [name, days, messages, activeDays, voiceHours, index] of expected) {
+      const row = {
+        joined_at: now - days * DAY,
+        message_count: messages,
+        active_days: activeDays,
+        voice_seconds: voiceHours * HOUR,
+        voice_started_at: null,
+        last_activity_at: now,
+      };
+      assert.equal(rankIndexFor(row, now), index, `${name} threshold should map to rank index ${index}`);
+    }
+  });
+
   test("LEGEND requires all duration, message, active-day, and voice thresholds", () => {
     const now = Date.now();
     const row = { joined_at: now - 180 * DAY, message_count: 10000, active_days: 60, voice_seconds: 40 * HOUR, voice_started_at: null, last_activity_at: now };
-    assert.equal(rankIndexFor(row, now), 7);
-    assert.equal(rankIndexFor({ ...row, voice_seconds: 60 * HOUR - 1 }, now), 6);
+    assert.equal(rankIndexFor(row, now), 6);
+    assert.equal(rankIndexFor({ ...row, voice_seconds: 40 * HOUR - 1 }, now), 5);
     assert.equal(snapshot({ ...row, joined_at: now }, now).days, 0);
   });
 
