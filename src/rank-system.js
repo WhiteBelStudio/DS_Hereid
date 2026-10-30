@@ -4,13 +4,12 @@ const DAY = 86_400_000;
 const INACTIVE_LIMIT = 60 * DAY;
 const RANKS = [
   { name: "NEWBIE", days: 0, messages: 0, activeDays: 0, voiceSeconds: 0 },
-  { name: "GUEST", days: 2, messages: 20, activeDays: 1, voiceSeconds: 0 },
-  { name: "MEMBER", days: 5, messages: 100, activeDays: 3, voiceSeconds: 30 * 60 },
+  { name: "MEMBER", days: 7, messages: 250, activeDays: 2, voiceSeconds: 1 * 3600 },
   { name: "ACTIVE", days: 10, messages: 300, activeDays: 5, voiceSeconds: 2 * 3600 },
   { name: "VETERAN", days: 21, messages: 800, activeDays: 10, voiceSeconds: 5 * 3600 },
-  { name: "MASTER", days: 45, messages: 2000, activeDays: 20, voiceSeconds: 12 * 3600 },
-  { name: "ELITE", days: 90, messages: 4500, activeDays: 35, voiceSeconds: 30 * 3600 },
-  { name: "LEGEND", days: 180, messages: 10000, activeDays: 60, voiceSeconds: 60 * 3600 },
+  { name: "MASTER", days: 45, messages: 2000, activeDays: 20, voiceSeconds: 10 * 3600 },
+  { name: "ELITE", days: 90, messages: 4500, activeDays: 35, voiceSeconds: 20 * 3600 },
+  { name: "LEGEND", days: 180, messages: 10000, activeDays: 60, voiceSeconds: 40 * 3600 },
 ];
 
 db.exec(`
@@ -38,6 +37,7 @@ db.exec(`
     PRIMARY KEY (guild_id, user_id, activity_date)
   );
 `);
+db.prepare("UPDATE member_rank_activity SET current_rank='NEWBIE' WHERE current_rank='GUEST'").run();
 
 const getRow = db.prepare("SELECT * FROM member_rank_activity WHERE guild_id=? AND user_id=?");
 const ensureRow = db.prepare(`
@@ -165,7 +165,8 @@ async function evaluateMember(member, now = Date.now()) {
   }
   const stats = snapshot(row, now);
   const rankIndex = rankIndexFor(row, now);
-  const currentIndex = RANKS.findIndex((rank) => rank.name === row.current_rank);
+  const storedRankIndex = RANKS.findIndex((rank) => rank.name === row.current_rank);
+  const currentIndex = storedRankIndex < 0 ? 0 : storedRankIndex;
   let targetIndex = rankIndex;
   let reason = "progress";
 
@@ -229,9 +230,9 @@ function getLeaderboard(guildId, limit = 10) {
     FROM member_rank_activity WHERE guild_id=?
     ORDER BY
       CASE current_rank
-        WHEN 'LEGEND' THEN 8 WHEN 'ELITE' THEN 7 WHEN 'MASTER' THEN 6
-        WHEN 'VETERAN' THEN 5 WHEN 'ACTIVE' THEN 4 WHEN 'MEMBER' THEN 3
-        WHEN 'GUEST' THEN 2 ELSE 1 END DESC,
+        WHEN 'LEGEND' THEN 6 WHEN 'ELITE' THEN 5 WHEN 'MASTER' THEN 4
+        WHEN 'VETERAN' THEN 3 WHEN 'ACTIVE' THEN 2 WHEN 'MEMBER' THEN 1
+        ELSE 0 END DESC,
       message_count DESC, active_days DESC, voice_seconds DESC
     LIMIT ?
   `).all(guildId, Math.max(1, Math.min(25, limit)));
