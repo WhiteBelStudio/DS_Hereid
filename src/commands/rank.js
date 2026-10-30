@@ -9,7 +9,6 @@ const RANK_EMOJI = {
   VETERAN: "🔥",
   ACTIVE: "⚡",
   MEMBER: "🌟",
-  GUEST: "🛡️",
   NEWBIE: "🌱",
 };
 
