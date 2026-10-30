@@ -3,7 +3,7 @@ const { getLeaderboard } = require("../rank-system");
 
 const RANK_EMOJI = {
   LEGEND: "👑", ELITE: "💎", MASTER: "🏆", VETERAN: "🔥",
-  ACTIVE: "⚡", MEMBER: "🌟", GUEST: "🛡️", NEWBIE: "🌱",
+  ACTIVE: "⚡", MEMBER: "🌟", NEWBIE: "🌱",
 };
 
 module.exports = {
