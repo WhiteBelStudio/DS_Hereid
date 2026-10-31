@@ -37,6 +37,8 @@ const THEMES = {
   "Золото": { file: "gold.jpg", colors: ["#211506", "#98651a", "#ffe4a0"], label: "ЗОЛОТАЯ ДИНАСТИЯ", motif: "gold" },
   "Лёд": { file: "ice.jpg", colors: ["#0b2037", "#387fba", "#d4f7ff"], label: "КРИСТАЛЬНЫЙ ШТОРМ", motif: "ice" },
   "Тень": { file: "shadow.jpg", colors: ["#080b14", "#343c54", "#a9b6d4"], label: "ТИХАЯ ТЕНЬ", motif: "shadow" },
+  "Тыква": { file: "pumpkin.jpg", colors: ["#1a0830", "#b8470f", "#ffb347"], label: "ТЫКВЕННАЯ НОЧЬ", motif: "pumpkin" },
+  "Кладбище": { file: "graveyard.jpg", colors: ["#04100f", "#1f7a5a", "#8dffb8"], label: "ПРОКЛЯТОЕ КЛАДБИЩЕ", motif: "graveyard" },
 };
 const DEFAULT_THEME = { file: "classic.jpg", colors: ["#101827", "#334b83", "#8ca9ff"], label: "КЛАССИЧЕСКИЙ БАННЕР", motif: "classic" };
 

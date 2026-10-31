@@ -12,6 +12,8 @@ const BANNER_STYLE = {
   Золото: { emoji: "👑", label: "Золото" },
   Лёд: { emoji: "❄️", label: "Лёд" },
   Тень: { emoji: "🌑", label: "Тень" },
+  Тыква: { emoji: "🎃", label: "Тыква" },
+  Кладбище: { emoji: "👻", label: "Кладбище" },
 };
 
 module.exports = {

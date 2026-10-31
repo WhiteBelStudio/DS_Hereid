@@ -44,6 +44,8 @@ const ITEM_STYLE = {
   banner_shadow: { emoji: "🌑" },
   banner_galaxy: { emoji: "🌌" },
   banner_gold: { emoji: "👑" },
+  banner_pumpkin: { emoji: "🎃" },
+  banner_graveyard: { emoji: "👻" },
 };
 function sortCatalogItems(items) {
   const categoryOrder = ["Титулы", "Значки", "Баннеры", "Цвета"];
